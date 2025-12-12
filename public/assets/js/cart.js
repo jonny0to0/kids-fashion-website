@@ -6,7 +6,16 @@
 // Add to cart
 async function addToCart(productId, variantId = null, quantity = 1) {
     try {
-        const siteUrl = window.location.origin + '/kid-bazar-ecom/public';
+        const siteUrl = window.SITE_URL || (function() {
+            const path = window.location.pathname;
+            if (path.includes('/kid-bazar-ecom/public')) {
+                return window.location.origin + '/kid-bazar-ecom/public';
+            }
+            if (path.includes('/kid-bazar-ecom')) {
+                return window.location.origin + '/kid-bazar-ecom/public';
+            }
+            return window.location.origin;
+        })();
         const formData = new FormData();
         formData.append('product_id', productId);
         if (variantId) {
@@ -23,9 +32,19 @@ async function addToCart(productId, variantId = null, quantity = 1) {
         
         if (data.success) {
             showToast('Item added to cart successfully!', 'success');
-            // Update cart count after adding item
+            // Update cart count immediately from response
             if (typeof updateCartCount === 'function') {
-                updateCartCount();
+                if (data.count !== undefined) {
+                    // Update directly from response
+                    const cartCountEl = document.getElementById('cart-count');
+                    if (cartCountEl) {
+                        cartCountEl.textContent = data.count;
+                        cartCountEl.style.display = data.count > 0 ? 'flex' : 'none';
+                    }
+                } else {
+                    // Fallback to fetching count
+                    updateCartCount();
+                }
             }
         } else {
             showToast(data.message || 'Failed to add item to cart', 'error');
@@ -43,7 +62,16 @@ async function updateCartItem(cartItemId, quantity) {
         formData.append('cart_item_id', cartItemId);
         formData.append('quantity', quantity);
         
-        const siteUrl = window.location.origin + '/kid-bazar-ecom/public';
+        const siteUrl = window.SITE_URL || (function() {
+            const path = window.location.pathname;
+            if (path.includes('/kid-bazar-ecom/public')) {
+                return window.location.origin + '/kid-bazar-ecom/public';
+            }
+            if (path.includes('/kid-bazar-ecom')) {
+                return window.location.origin + '/kid-bazar-ecom/public';
+            }
+            return window.location.origin;
+        })();
         const response = await fetch(siteUrl + '/cart/update', {
             method: 'POST',
             body: formData
@@ -52,8 +80,14 @@ async function updateCartItem(cartItemId, quantity) {
         const data = await response.json();
         
         if (data.success) {
-            // Update cart count before reloading
-            if (typeof updateCartCount === 'function') {
+            // Update cart count from response
+            if (data.count !== undefined) {
+                const cartCountEl = document.getElementById('cart-count');
+                if (cartCountEl) {
+                    cartCountEl.textContent = data.count;
+                    cartCountEl.style.display = data.count > 0 ? 'flex' : 'none';
+                }
+            } else if (typeof updateCartCount === 'function') {
                 updateCartCount();
             }
             location.reload(); // Reload to update totals
@@ -76,7 +110,16 @@ async function removeCartItem(cartItemId) {
         const formData = new FormData();
         formData.append('cart_item_id', cartItemId);
         
-        const siteUrl = window.location.origin + '/kid-bazar-ecom/public';
+        const siteUrl = window.SITE_URL || (function() {
+            const path = window.location.pathname;
+            if (path.includes('/kid-bazar-ecom/public')) {
+                return window.location.origin + '/kid-bazar-ecom/public';
+            }
+            if (path.includes('/kid-bazar-ecom')) {
+                return window.location.origin + '/kid-bazar-ecom/public';
+            }
+            return window.location.origin;
+        })();
         const response = await fetch(siteUrl + '/cart/remove', {
             method: 'POST',
             body: formData
@@ -86,8 +129,14 @@ async function removeCartItem(cartItemId) {
         
         if (data.success) {
             showToast('Item removed from cart', 'success');
-            // Update cart count before reloading
-            if (typeof updateCartCount === 'function') {
+            // Update cart count from response
+            if (data.count !== undefined) {
+                const cartCountEl = document.getElementById('cart-count');
+                if (cartCountEl) {
+                    cartCountEl.textContent = data.count;
+                    cartCountEl.style.display = data.count > 0 ? 'flex' : 'none';
+                }
+            } else if (typeof updateCartCount === 'function') {
                 updateCartCount();
             }
             location.reload();

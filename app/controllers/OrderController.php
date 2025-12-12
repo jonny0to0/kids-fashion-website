@@ -20,6 +20,13 @@ class OrderController {
             exit;
         }
         
+        // Restrict access to customers only
+        if (Session::isAdmin()) {
+            Session::setFlash('error', 'Access denied. This feature is only available for customers.');
+            header('Location: ' . SITE_URL . '/admin');
+            exit;
+        }
+        
         $userId = Session::getUserId();
         $order = $this->orderModel->findByOrderNumber($orderNumber);
         
@@ -43,6 +50,13 @@ class OrderController {
     public function index() {
         if (!Session::isLoggedIn()) {
             header('Location: ' . SITE_URL . '/user/login');
+            exit;
+        }
+        
+        // Restrict access to customers only
+        if (Session::isAdmin()) {
+            Session::setFlash('error', 'Access denied. This feature is only available for customers.');
+            header('Location: ' . SITE_URL . '/admin');
             exit;
         }
         

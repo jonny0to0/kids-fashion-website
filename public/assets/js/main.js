@@ -76,6 +76,73 @@ function formatCurrency(amount) {
     });
 }
 
+// Toggle wishlist item
+async function toggleWishlist(productId) {
+    try {
+        // Check if user is logged in
+        if (!window.SITE_URL) {
+            showToast('Please login to add items to wishlist', 'error');
+            return;
+        }
+        
+        const siteUrl = window.SITE_URL;
+        const wishlistBtn = document.querySelector(`.wishlist-btn-${productId}`);
+        
+        if (!wishlistBtn) {
+            console.error('Wishlist button not found for product:', productId);
+            showToast('Error: Wishlist button not found', 'error');
+            return;
+        }
+        
+        const svg = wishlistBtn.querySelector('svg');
+        if (!svg) {
+            console.error('SVG element not found in wishlist button');
+            showToast('Error: SVG element not found', 'error');
+            return;
+        }
+        
+        const isInWishlist = wishlistBtn.classList.contains('in-wishlist');
+        const endpoint = isInWishlist ? '/user/wishlistRemove' : '/user/wishlistAdd';
+        const formData = new FormData();
+        formData.append('product_id', productId);
+        
+        const response = await fetch(siteUrl + endpoint, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update button state
+            if (data.in_wishlist) {
+                wishlistBtn.classList.add('in-wishlist');
+                svg.classList.add('text-pink-600', 'fill-current');
+                svg.classList.remove('text-gray-700');
+                svg.setAttribute('fill', 'currentColor');
+                wishlistBtn.setAttribute('title', 'Remove from Wishlist');
+            } else {
+                wishlistBtn.classList.remove('in-wishlist');
+                svg.classList.remove('text-pink-600', 'fill-current');
+                svg.classList.add('text-gray-700');
+                svg.setAttribute('fill', 'none');
+                wishlistBtn.setAttribute('title', 'Add to Wishlist');
+            }
+            showToast(data.message || (data.in_wishlist ? 'Added to wishlist' : 'Removed from wishlist'), 'success');
+        } else {
+            showToast(data.message || 'Failed to update wishlist', 'error');
+        }
+    } catch (error) {
+        console.error('Error toggling wishlist:', error);
+        showToast('An error occurred. Please try again.', 'error');
+    }
+}
+
 // Product Slider Alpine.js Component
 function productSlider() {
     return {

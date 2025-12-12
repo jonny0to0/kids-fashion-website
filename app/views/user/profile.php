@@ -1,16 +1,16 @@
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
     <div class="max-w-4xl mx-auto">
-        <h2 class="text-3xl font-bold mb-8">My Profile</h2>
+        <h2 class="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">My Profile</h2>
         
         <?php if (Session::isAdmin()): ?>
             <!-- Admin Dashboard Link -->
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
-                        <h3 class="font-semibold text-blue-900">Admin Access</h3>
-                        <p class="text-sm text-blue-700">You have administrative privileges</p>
+                        <h3 class="font-semibold text-blue-900 text-sm sm:text-base">Admin Access</h3>
+                        <p class="text-xs sm:text-sm text-blue-700">You have administrative privileges</p>
                     </div>
-                    <a href="<?php echo SITE_URL; ?>/admin" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium">
+                    <a href="<?php echo SITE_URL; ?>/admin" class="bg-blue-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 font-medium text-sm sm:text-base whitespace-nowrap">
                         Go to Admin Dashboard
                     </a>
                 </div>
@@ -64,10 +64,10 @@
             </div>
         <?php endif; ?>
         
-        <div class="bg-white rounded-lg shadow-md p-8">
-            <h3 class="text-xl font-bold mb-6">Profile Information</h3>
+        <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8">
+            <h3 class="text-lg sm:text-xl font-bold mb-4 sm:mb-6">Profile Information</h3>
             <form method="POST" action="<?php echo SITE_URL; ?>/user/profile">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">First Name</label>
                         <input type="text" name="first_name" required
@@ -105,8 +105,8 @@
                     </div>
                 </div>
                 
-                <div class="mt-6">
-                    <button type="submit" class="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 font-bold">
+                <div class="mt-4 sm:mt-6">
+                    <button type="submit" class="w-full sm:w-auto bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 font-bold text-sm sm:text-base">
                         Update Profile
                     </button>
                 </div>

@@ -69,21 +69,43 @@ function removeFromWishlist(productId) {
         const formData = new FormData();
         formData.append('product_id', productId);
         
-        fetch('<?php echo SITE_URL; ?>/user/wishlistRemove', {
+        const siteUrl = window.SITE_URL || '<?php echo SITE_URL; ?>';
+        
+        fetch(siteUrl + '/user/wishlistRemove', {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                location.reload();
+                if (typeof showToast === 'function') {
+                    showToast(data.message || 'Item removed from wishlist', 'success');
+                }
+                // Reload after a short delay to show the toast
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
             } else {
-                alert('Failed to remove item from wishlist');
+                if (typeof showToast === 'function') {
+                    showToast(data.message || 'Failed to remove item from wishlist', 'error');
+                } else {
+                    alert(data.message || 'Failed to remove item from wishlist');
+                }
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred');
+            console.error('Error removing from wishlist:', error);
+            if (typeof showToast === 'function') {
+                showToast('An error occurred. Please try again.', 'error');
+            } else {
+                alert('An error occurred. Please try again.');
+            }
         });
     }
 }

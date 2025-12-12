@@ -46,9 +46,14 @@ $path = trim($path, '/');
 // Split path into segments
 $segments = $path ? explode('/', $path) : [];
 
+// Helper function to convert kebab-case to camelCase
+function kebabToCamel($string) {
+    return lcfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $string))));
+}
+
 // Get controller and action
 $controller_name = !empty($segments[0]) ? ucfirst($segments[0]) . 'Controller' : 'HomeController';
-$action = !empty($segments[1]) ? $segments[1] : 'index';
+$action = !empty($segments[1]) ? kebabToCamel($segments[1]) : 'index';
 $params = array_slice($segments, 2);
 
 // Check if controller exists

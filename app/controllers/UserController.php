@@ -205,11 +205,68 @@ class UserController {
     public function wishlist() {
         $this->requireAuth();
         
+        // Restrict access to customers only
+        if (Session::isAdmin()) {
+            Session::setFlash('error', 'Access denied. This feature is only available for customers.');
+            header('Location: ' . SITE_URL . '/admin');
+            exit;
+        }
+        
         $userId = Session::getUserId();
         $wishlistModel = new Wishlist();
         $wishlistItems = $wishlistModel->getUserWishlist($userId);
         
         $this->render('user/wishlist', ['wishlistItems' => $wishlistItems]);
+    }
+    
+    /**
+     * Add item to wishlist (AJAX)
+     */
+    public function wishlistAdd() {
+        $this->requireAuth();
+        header('Content-Type: application/json');
+        
+        // Restrict access to customers only
+        if (Session::isAdmin()) {
+            echo json_encode(['success' => false, 'message' => 'Access denied. This feature is only available for customers.']);
+            exit;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
+        }
+        
+        $userId = Session::getUserId();
+        $productId = (int)($_POST['product_id'] ?? 0);
+        
+        if (!$productId) {
+            echo json_encode(['success' => false, 'message' => 'Product ID is required']);
+            exit;
+        }
+        
+        // Verify product exists
+        $productModel = new Product();
+        $product = $productModel->find($productId);
+        if (!$product) {
+            echo json_encode(['success' => false, 'message' => 'Product not found']);
+            exit;
+        }
+        
+        $wishlistModel = new Wishlist();
+        
+        // Check if already in wishlist
+        if ($wishlistModel->isInWishlist($userId, $productId)) {
+            echo json_encode(['success' => true, 'message' => 'Item already in wishlist', 'in_wishlist' => true]);
+            exit;
+        }
+        
+        if ($wishlistModel->add($userId, $productId)) {
+            echo json_encode(['success' => true, 'message' => 'Item added to wishlist', 'in_wishlist' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to add item to wishlist. Please try again.']);
+        }
+        exit;
     }
     
     /**
@@ -219,9 +276,15 @@ class UserController {
         $this->requireAuth();
         header('Content-Type: application/json');
         
+        // Restrict access to customers only
+        if (Session::isAdmin()) {
+            echo json_encode(['success' => false, 'message' => 'Access denied. This feature is only available for customers.']);
+            exit;
+        }
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Invalid request']);
-            return;
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
         }
         
         $userId = Session::getUserId();
@@ -229,13 +292,17 @@ class UserController {
         
         if (!$productId) {
             echo json_encode(['success' => false, 'message' => 'Product ID is required']);
-            return;
+            exit;
         }
         
         $wishlistModel = new Wishlist();
-        $wishlistModel->remove($userId, $productId);
         
-        echo json_encode(['success' => true, 'message' => 'Item removed from wishlist']);
+        if ($wishlistModel->remove($userId, $productId)) {
+            echo json_encode(['success' => true, 'message' => 'Item removed from wishlist', 'in_wishlist' => false]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to remove item from wishlist. It may not be in your wishlist.']);
+        }
+        exit;
     }
     
     /**

@@ -58,7 +58,15 @@ class CartController {
         $cart = $this->getCart();
         $this->cartModel->addItem($cart['cart_id'], $productId, $variantId, $quantity, $price);
         
-        echo json_encode(['success' => true, 'message' => 'Item added to cart']);
+        // Get updated cart count
+        $total = $this->cartModel->getTotal($cart['cart_id']);
+        $count = $total['count'] ?? $total['total_quantity'] ?? $total['item_count'] ?? 0;
+        
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Item added to cart',
+            'count' => (int)$count
+        ]);
     }
     
     /**
@@ -79,11 +87,13 @@ class CartController {
         
         $cart = $this->getCart();
         $total = $this->cartModel->getTotal($cart['cart_id']);
+        $count = $total['count'] ?? $total['total_quantity'] ?? $total['item_count'] ?? 0;
         
         echo json_encode([
             'success' => true,
             'total' => $total['total'] ?? 0,
-            'item_count' => $total['item_count'] ?? 0
+            'item_count' => $total['item_count'] ?? 0,
+            'count' => (int)$count
         ]);
     }
     
@@ -101,7 +111,16 @@ class CartController {
         $cartItemId = (int)($_POST['cart_item_id'] ?? 0);
         $this->cartModel->removeItem($cartItemId);
         
-        echo json_encode(['success' => true, 'message' => 'Item removed from cart']);
+        // Get updated cart count
+        $cart = $this->getCart();
+        $total = $this->cartModel->getTotal($cart['cart_id']);
+        $count = $total['count'] ?? $total['total_quantity'] ?? $total['item_count'] ?? 0;
+        
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Item removed from cart',
+            'count' => (int)$count
+        ]);
     }
     
     /**
