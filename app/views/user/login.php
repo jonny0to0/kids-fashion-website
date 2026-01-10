@@ -1,5 +1,95 @@
+<?php
+// Load dashboard logo from settings for login screen (dual type support)
+$logoType = 'text';
+$logoImageUrl = '';
+$logoText = '';
+$logoTextStyle = '';
+
+try {
+    require_once APP_PATH . '/models/Settings.php';
+    $settingsModel = new Settings();
+    
+    // Get logo type
+    $logoType = $settingsModel->get('logo_type', 'text');
+    
+    if ($logoType === 'image') {
+        // Try new logo_image setting first, fallback to legacy dashboard_logo
+        $logoImagePath = $settingsModel->get('logo_image', '');
+        if (empty($logoImagePath)) {
+            $logoImagePath = $settingsModel->get('dashboard_logo', '');
+        }
+        
+        if (!empty($logoImagePath)) {
+            $normalizedPath = '/' . ltrim($logoImagePath, '/');
+            $logoImageUrl = SITE_URL . $normalizedPath;
+            
+            // Verify file exists and add cache busting
+            $fullPath = PUBLIC_PATH . $normalizedPath;
+            if (file_exists($fullPath)) {
+                $version = filemtime($fullPath);
+                $logoImageUrl .= '?v=' . $version;
+            } else {
+                // File doesn't exist, fallback to text logo
+                $logoImageUrl = '';
+                $logoType = 'text';
+            }
+        } else {
+            $logoType = 'text';
+        }
+    }
+    
+    // Prepare text logo settings (for login screen, use header font size)
+    if ($logoType === 'text' || empty($logoImageUrl)) {
+        $logoText = $settingsModel->get('logo_text', '');
+        if (empty($logoText)) {
+            $logoText = $settingsModel->get('store_name', SITE_NAME);
+        }
+        
+        // Use header font size for login screen
+        $fontSize = (int)$settingsModel->get('logo_text_font_size_header', 18);
+        $fontWeight = (int)$settingsModel->get('logo_text_font_weight', 600);
+        $textColor = $settingsModel->get('logo_text_color', '#1e293b'); // Darker color for login page
+        $maxWidth = (int)$settingsModel->get('logo_text_max_width', 200);
+        
+        $logoTextStyle = sprintf(
+            'font-size: %dpx; font-weight: %d; color: %s; max-width: %dpx;',
+            $fontSize + 4, // Slightly larger for login
+            $fontWeight,
+            htmlspecialchars($textColor),
+            $maxWidth
+        );
+    }
+    
+} catch (Exception $e) {
+    // Silently fail if settings can't be loaded - use fallback
+    error_log("Login page logo error: " . $e->getMessage());
+    $logoType = 'text';
+    $logoText = SITE_NAME;
+    $logoTextStyle = 'font-size: 22px; font-weight: 600; color: #1e293b;';
+}
+?>
 <div class="container mx-auto px-4 py-12">
     <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
+        <?php if ($logoType === 'image' && !empty($logoImageUrl)): ?>
+            <?php
+            // Get dimension constraints for login screen (slightly larger)
+            $settingsModel = new Settings();
+            $maxHeight = (int)$settingsModel->get('logo_image_max_height', 60) + 20; // Add 20px for login
+            $maxWidth = (int)$settingsModel->get('logo_image_max_width', 200) + 40; // Add 40px for login
+            ?>
+            <div class="text-center mb-6">
+                <img src="<?php echo htmlspecialchars($logoImageUrl); ?>" 
+                     alt="<?php echo htmlspecialchars(SITE_NAME); ?> Logo" 
+                     class="w-auto mx-auto object-contain"
+                     style="max-height: <?php echo $maxHeight; ?>px; max-width: <?php echo $maxWidth; ?>px; height: auto;">
+            </div>
+        <?php elseif ($logoType === 'text'): ?>
+            <div class="text-center mb-6">
+                <h1 class="font-bold mx-auto" style="<?php echo htmlspecialchars($logoTextStyle); ?>">
+                    <?php echo htmlspecialchars($logoText); ?>
+                </h1>
+            </div>
+        <?php endif; ?>
         <h2 class="text-3xl font-bold text-center mb-8">Login</h2>
         
         <?php if (!empty($errors)): ?>

@@ -5,20 +5,6 @@
             <h3 class="font-bold text-lg mb-4">Filters</h3>
             
             <form method="GET" action="<?php echo SITE_URL; ?>/product">
-                <!-- Category -->
-                <div class="mb-4">
-                    <label class="block font-medium mb-2">Category</label>
-                    <select name="category" class="w-full border border-gray-300 rounded px-3 py-2">
-                        <option value="">All Categories</option>
-                        <?php foreach ($categories as $cat): ?>
-                            <option value="<?php echo $cat['category_id']; ?>" 
-                                    <?php echo ($filters['category_id'] == $cat['category_id']) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($cat['name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
                 <!-- Gender -->
                 <div class="mb-4">
                     <label class="block font-medium mb-2">Gender</label>

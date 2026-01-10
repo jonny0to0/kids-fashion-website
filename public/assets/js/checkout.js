@@ -62,7 +62,7 @@ function closeAddressModal() {
 function saveAddress(event) {
     const form = document.getElementById('address-form');
     if (!form) {
-        alert('Form not loaded. Please wait...');
+        showAlert('Form Not Loaded', 'Form not loaded. Please wait...', 'warning');
         return;
     }
     
@@ -94,9 +94,11 @@ function saveAddress(event) {
     .then(data => {
         if (data.success) {
             // Show success message
-            alert('Address added successfully!');
-            // Reload page to show the new address
-            window.location.reload();
+            showToast('Address added successfully!', 'success');
+            // Reload page to show the new address after a short delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         } else {
             // Show errors
             if (errorsContainer) {
@@ -112,13 +114,13 @@ function saveAddress(event) {
                 errorsContainer.innerHTML = errorHtml;
                 errorsContainer.classList.remove('hidden');
             } else {
-                alert(data.message || 'Failed to save address. Please try again.');
+                showToast(data.message || 'Failed to save address. Please try again.', 'error');
             }
         }
     })
     .catch(error => {
         console.error('Error saving address:', error);
-        alert('An error occurred. Please try again.');
+        showToast('An error occurred. Please try again.', 'error');
     })
     .finally(() => {
         if (saveButton) {

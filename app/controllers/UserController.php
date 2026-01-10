@@ -20,6 +20,24 @@ class UserController {
             exit;
         }
         
+        // Check if there's a pending wishlist product
+        if (isset($_GET['wishlist_product']) && !empty($_GET['wishlist_product'])) {
+            $productId = (int)$_GET['wishlist_product'];
+            Session::set('pending_wishlist_product_id', $productId);
+            
+            // Store redirect URL if provided
+            if (isset($_GET['redirect']) && !empty($_GET['redirect'])) {
+                Session::set('redirect_after_login', $_GET['redirect']);
+            } else {
+                // Default redirect to product detail page
+                $productModel = new Product();
+                $product = $productModel->find($productId);
+                if ($product) {
+                    Session::set('redirect_after_login', SITE_URL . '/product/detail/' . $product['slug']);
+                }
+            }
+        }
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->handleLogin();
         } else {
@@ -59,6 +77,29 @@ class UserController {
                     setcookie('remember_token', base64_encode($user['user_id']), time() + (86400 * 30), '/');
                 }
                 
+                // Handle pending wishlist product (only for customers)
+                $wishlistAdded = false;
+                if ($user['user_type'] !== USER_TYPE_ADMIN && Session::has('pending_wishlist_product_id')) {
+                    $pendingProductId = Session::get('pending_wishlist_product_id');
+                    Session::remove('pending_wishlist_product_id');
+                    
+                    // Verify product exists
+                    $productModel = new Product();
+                    $product = $productModel->find($pendingProductId);
+                    
+                    if ($product) {
+                        $wishlistModel = new Wishlist();
+                        // Add to wishlist if not already there
+                        if (!$wishlistModel->isInWishlist($user['user_id'], $pendingProductId)) {
+                            if ($wishlistModel->add($user['user_id'], $pendingProductId)) {
+                                $wishlistAdded = true;
+                            }
+                        } else {
+                            $wishlistAdded = true; // Already in wishlist, consider it successful
+                        }
+                    }
+                }
+                
                 // Redirect admins to admin dashboard
                 if ($user['user_type'] === USER_TYPE_ADMIN) {
                     $redirect = Session::get('redirect_after_login', SITE_URL . '/admin');
@@ -67,7 +108,11 @@ class UserController {
                 }
                 Session::remove('redirect_after_login');
                 
-                Session::setFlash('success', 'Welcome back! You have successfully logged in.');
+                if ($wishlistAdded) {
+                    Session::setFlash('success', 'Welcome back! You have successfully logged in. The product has been added to your wishlist.');
+                } else {
+                    Session::setFlash('success', 'Welcome back! You have successfully logged in.');
+                }
                 header('Location: ' . $redirect);
                 exit;
             } else {
@@ -85,6 +130,20 @@ class UserController {
         if (Session::isLoggedIn()) {
             header('Location: ' . SITE_URL);
             exit;
+        }
+        
+        // Check if there's a pending wishlist product (from login page redirect)
+        if (Session::has('pending_wishlist_product_id')) {
+            // Keep the pending wishlist product ID in session for after registration
+            // Also preserve redirect URL if it exists
+            if (!Session::has('redirect_after_login')) {
+                $pendingProductId = Session::get('pending_wishlist_product_id');
+                $productModel = new Product();
+                $product = $productModel->find($pendingProductId);
+                if ($product) {
+                    Session::set('redirect_after_login', SITE_URL . '/product/detail/' . $product['slug']);
+                }
+            }
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -141,9 +200,53 @@ class UserController {
             $userId = $this->userModel->register($data);
             
             if ($userId) {
-                Session::setFlash('success', 'Registration successful! Please login.');
-                header('Location: ' . SITE_URL . '/user/login');
-                exit;
+                // Auto-login after registration
+                $user = $this->userModel->find($userId);
+                if ($user) {
+                    Session::set('user_id', $user['user_id']);
+                    Session::set('user_type', $user['user_type']);
+                    Session::set('user_name', $user['first_name'] . ' ' . $user['last_name']);
+                    Session::set('user_email', $user['email']);
+                    
+                    // Handle pending wishlist product (only for customers)
+                    $wishlistAdded = false;
+                    if ($user['user_type'] !== USER_TYPE_ADMIN && Session::has('pending_wishlist_product_id')) {
+                        $pendingProductId = Session::get('pending_wishlist_product_id');
+                        Session::remove('pending_wishlist_product_id');
+                        
+                        // Verify product exists
+                        $productModel = new Product();
+                        $product = $productModel->find($pendingProductId);
+                        
+                        if ($product) {
+                            $wishlistModel = new Wishlist();
+                            // Add to wishlist if not already there
+                            if (!$wishlistModel->isInWishlist($user['user_id'], $pendingProductId)) {
+                                if ($wishlistModel->add($user['user_id'], $pendingProductId)) {
+                                    $wishlistAdded = true;
+                                }
+                            } else {
+                                $wishlistAdded = true; // Already in wishlist, consider it successful
+                            }
+                        }
+                    }
+                    
+                    // Get redirect URL
+                    $redirect = Session::get('redirect_after_login', SITE_URL);
+                    Session::remove('redirect_after_login');
+                    
+                    if ($wishlistAdded) {
+                        Session::setFlash('success', 'Registration successful! The product has been added to your wishlist.');
+                    } else {
+                        Session::setFlash('success', 'Registration successful! Welcome to our store.');
+                    }
+                    header('Location: ' . $redirect);
+                    exit;
+                } else {
+                    Session::setFlash('success', 'Registration successful! Please login.');
+                    header('Location: ' . SITE_URL . '/user/login');
+                    exit;
+                }
             } else {
                 $errors[] = 'Registration failed. Please try again.';
             }
@@ -223,17 +326,29 @@ class UserController {
      * Add item to wishlist (AJAX)
      */
     public function wishlistAdd() {
-        $this->requireAuth();
         header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
+        }
+        
+        // Check if this is just an auth check (from JavaScript)
+        $checkAuth = isset($_POST['check_auth']) && $_POST['check_auth'] === '1';
+        
+        // If user is not logged in, return requires_auth flag
+        if (!Session::isLoggedIn()) {
+            if ($checkAuth) {
+                echo json_encode(['success' => false, 'requires_auth' => true, 'message' => 'Please login to add items to wishlist']);
+            } else {
+                echo json_encode(['success' => false, 'requires_auth' => true, 'message' => 'Please login to add items to wishlist']);
+            }
+            exit;
+        }
         
         // Restrict access to customers only
         if (Session::isAdmin()) {
             echo json_encode(['success' => false, 'message' => 'Access denied. This feature is only available for customers.']);
-            exit;
-        }
-        
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
             exit;
         }
         
@@ -257,12 +372,16 @@ class UserController {
         
         // Check if already in wishlist
         if ($wishlistModel->isInWishlist($userId, $productId)) {
-            echo json_encode(['success' => true, 'message' => 'Item already in wishlist', 'in_wishlist' => true]);
+            // Get current wishlist count
+            $count = $wishlistModel->getCount($userId);
+            echo json_encode(['success' => true, 'message' => 'Item already in wishlist', 'in_wishlist' => true, 'count' => $count]);
             exit;
         }
         
         if ($wishlistModel->add($userId, $productId)) {
-            echo json_encode(['success' => true, 'message' => 'Item added to wishlist', 'in_wishlist' => true]);
+            // Get updated wishlist count
+            $count = $wishlistModel->getCount($userId);
+            echo json_encode(['success' => true, 'message' => 'Item added to wishlist', 'in_wishlist' => true, 'count' => $count]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to add item to wishlist. Please try again.']);
         }
@@ -298,10 +417,50 @@ class UserController {
         $wishlistModel = new Wishlist();
         
         if ($wishlistModel->remove($userId, $productId)) {
-            echo json_encode(['success' => true, 'message' => 'Item removed from wishlist', 'in_wishlist' => false]);
+            // Get updated wishlist count
+            $count = $wishlistModel->getCount($userId);
+            echo json_encode(['success' => true, 'message' => 'Item removed from wishlist', 'in_wishlist' => false, 'count' => $count]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to remove item from wishlist. It may not be in your wishlist.']);
         }
+        exit;
+    }
+    
+    /**
+     * Get wishlist count (AJAX)
+     */
+    public function wishlistGetCount() {
+        // Only allow AJAX requests
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+                  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        
+        // Also check if it's a fetch request (modern browsers)
+        $isFetch = !empty($_SERVER['HTTP_ACCEPT']) && 
+                   strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+        
+        if (!$isAjax && !$isFetch) {
+            // Not an AJAX request, redirect to home
+            header('Location: ' . SITE_URL);
+            exit;
+        }
+        
+        $this->requireAuth();
+        header('Content-Type: application/json');
+        
+        // Restrict access to customers only
+        if (Session::isAdmin()) {
+            echo json_encode(['success' => false, 'message' => 'Access denied. This feature is only available for customers.', 'count' => 0]);
+            exit;
+        }
+        
+        $userId = Session::getUserId();
+        $wishlistModel = new Wishlist();
+        $count = $wishlistModel->getCount($userId);
+        
+        echo json_encode([
+            'success' => true,
+            'count' => $count
+        ]);
         exit;
     }
     

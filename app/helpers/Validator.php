@@ -33,12 +33,31 @@ class Validator {
     }
     
     /**
-     * Sanitize string
+     * Sanitize string (for database storage - NO HTML escaping)
+     * HTML escaping should only happen at output time using htmlspecialchars()
+     * 
+     * @param string $string Input string
+     * @param bool $stripTags Whether to strip HTML tags (default: true for safety)
+     * @return string Sanitized string ready for database storage
      */
     public static function sanitize($string, $stripTags = true) {
+        $string = trim($string);
         if ($stripTags) {
             $string = strip_tags($string);
         }
+        // Only trim and optionally strip tags - NO HTML escaping
+        // HTML escaping must be done at output time only
+        return $string;
+    }
+    
+    /**
+     * Sanitize string for HTML output (with escaping)
+     * Use this only when outputting to HTML, never before database save
+     * 
+     * @param string $string Input string
+     * @return string HTML-escaped string safe for output
+     */
+    public static function escapeHtml($string) {
         return htmlspecialchars(trim($string), ENT_QUOTES, 'UTF-8');
     }
     

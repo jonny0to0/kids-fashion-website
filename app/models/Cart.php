@@ -58,21 +58,60 @@ class Cart extends Model {
     }
     
     /**
-     * Get cart items
+     * Get cart items with complete product information
      */
     public function getItems($cartId) {
-        $sql = "SELECT ci.*, p.name, p.slug, p.sku,
-                (SELECT image_url FROM product_images WHERE product_id = p.product_id AND is_primary = 1 LIMIT 1) as image,
+        $sql = "SELECT ci.*, 
+                p.name, p.slug, p.sku, p.price as original_price, p.sale_price,
+                p.stock_quantity, p.max_order_quantity,
                 COALESCE(p.sale_price, p.price) as product_price,
-                pv.size, pv.color, pv.color_code
+                (SELECT image_url FROM product_images WHERE product_id = p.product_id AND is_primary = 1 LIMIT 1) as image,
+                pv.size, pv.color, pv.color_code, pv.stock_quantity as variant_stock,
+                u.first_name, u.last_name,
+                CASE 
+                    WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL 
+                    THEN CONCAT(u.first_name, ' ', u.last_name)
+                    WHEN u.first_name IS NOT NULL 
+                    THEN u.first_name
+                    ELSE NULL
+                END as seller_name
                 FROM cart_items ci
                 JOIN products p ON ci.product_id = p.product_id
                 LEFT JOIN product_variants pv ON ci.variant_id = pv.variant_id
+                LEFT JOIN users u ON p.vendor_id = u.user_id
                 WHERE ci.cart_id = ?
                 ORDER BY ci.added_at DESC";
         
         $stmt = $this->query($sql, [$cartId]);
-        return $stmt->fetchAll();
+        $items = $stmt->fetchAll();
+        
+        // Calculate delivery date and discount percentage for each item
+        foreach ($items as &$item) {
+            // Calculate discount percentage
+            if ($item['sale_price'] && $item['original_price'] > $item['sale_price']) {
+                $item['discount_percentage'] = round((($item['original_price'] - $item['sale_price']) / $item['original_price']) * 100);
+            } else {
+                $item['discount_percentage'] = 0;
+            }
+            
+            // Calculate estimated delivery date (3-7 business days)
+            $deliveryDays = rand(3, 7);
+            $item['estimated_delivery'] = date('Y-m-d', strtotime("+{$deliveryDays} days"));
+            $item['estimated_delivery_formatted'] = date('M d, Y', strtotime("+{$deliveryDays} days"));
+            
+            // Get available stock (variant stock if variant exists, else product stock)
+            $item['available_stock'] = $item['variant_id'] && $item['variant_stock'] !== null 
+                ? (int)$item['variant_stock'] 
+                : (int)$item['stock_quantity'];
+            
+            // Set max quantity based on stock
+            $item['max_quantity'] = min(
+                $item['max_order_quantity'] ?? 10,
+                $item['available_stock']
+            );
+        }
+        
+        return $items;
     }
     
     /**

@@ -37,7 +37,7 @@ if (Session::isLoggedIn() && !Session::isAdmin()) {
         
         <!-- Quick Action Buttons (Visible on Hover) -->
         <div class="absolute top-3 right-3 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-            <?php if (Session::isLoggedIn() && !Session::isAdmin()): ?>
+            <?php if (!Session::isAdmin()): ?>
                 <button onclick="toggleWishlist(<?php echo $product['product_id']; ?>)" 
                         class="wishlist-btn-<?php echo $product['product_id']; ?> <?php echo $inWishlist ? 'in-wishlist' : ''; ?> bg-white/90 backdrop-blur-sm hover:bg-white p-2.5 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
                         title="<?php echo $inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'; ?>">
@@ -92,19 +92,37 @@ if (Session::isLoggedIn() && !Session::isAdmin()) {
             <?php endif; ?>
         </div>
         
-        <!-- Rating (if available) -->
-        <?php if (isset($product['rating']) && $product['rating'] > 0): ?>
-            <div class="flex items-center gap-1 mb-3">
-                <div class="flex items-center">
-                    <?php for ($i = 1; $i <= 5; $i++): ?>
-                        <svg class="w-4 h-4 <?php echo $i <= $product['rating'] ? 'text-yellow-400 fill-current' : 'text-gray-300'; ?>" fill="currentColor" viewBox="0 0 20 20">
+        <!-- Customer Ratings & Stars -->
+        <?php 
+        $avgRating = isset($product['rating']) && $product['rating'] > 0 ? floatval($product['rating']) : 0;
+        $reviewCount = isset($product['review_count']) ? intval($product['review_count']) : 0;
+        $roundedRating = round($avgRating);
+        ?>
+        <div class="flex items-center gap-1.5 mb-3">
+            <div class="flex items-center">
+                <?php for ($i = 1; $i <= 5; $i++): ?>
+                    <?php if ($avgRating > 0 && $i <= $roundedRating): ?>
+                        <!-- Filled star -->
+                        <svg class="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                         </svg>
-                    <?php endfor; ?>
-                </div>
-                <span class="text-xs text-gray-600 ml-1">(<?php echo number_format($product['rating'], 1); ?>)</span>
+                    <?php else: ?>
+                        <!-- Empty star -->
+                        <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                        </svg>
+                    <?php endif; ?>
+                <?php endfor; ?>
             </div>
-        <?php endif; ?>
+            <?php if ($avgRating > 0): ?>
+                <span class="text-xs font-medium text-gray-700"><?php echo number_format($avgRating, 1); ?></span>
+                <?php if ($reviewCount > 0): ?>
+                    <span class="text-xs text-gray-500">(<?php echo $reviewCount; ?>)</span>
+                <?php endif; ?>
+            <?php else: ?>
+                <span class="text-xs text-gray-400">No ratings</span>
+            <?php endif; ?>
+        </div>
         
         <!-- Mobile Add to Cart Button (Visible on small screens) -->
         <button onclick="addToCart(<?php echo $product['product_id']; ?>)" 

@@ -34,15 +34,16 @@ CREATE TABLE IF NOT EXISTS categories (
     display_order INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (parent_id) REFERENCES categories(category_id) ON DELETE CASCADE,
     INDEX idx_parent (parent_id),
-    INDEX idx_slug (slug)
+    INDEX idx_slug (slug),
+    INDEX idx_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Products Table
 CREATE TABLE IF NOT EXISTS products (
     product_id INT PRIMARY KEY AUTO_INCREMENT,
-    category_id INT NOT NULL,
     vendor_id INT NULL,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
@@ -69,9 +70,7 @@ CREATE TABLE IF NOT EXISTS products (
     meta_description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE CASCADE,
     FOREIGN KEY (vendor_id) REFERENCES users(user_id) ON DELETE SET NULL,
-    INDEX idx_category (category_id),
     INDEX idx_slug (slug),
     INDEX idx_age_gender (age_group, gender),
     INDEX idx_featured (is_featured),
@@ -289,12 +288,4 @@ INSERT INTO users (email, password, first_name, last_name, user_type, email_veri
 VALUES ('admin@kidsbazaar.com', '$2y$10$QuRsy8diRPO3ziCrUmlRnuxV4PNEY7VAtxCmcsYmzHl0EFx5i415C', 'Admin', 'User', 'admin', TRUE, 'active')
 ON DUPLICATE KEY UPDATE email=email;
 
--- Insert Sample Categories
-INSERT INTO categories (name, slug, description, is_active, display_order) VALUES
-('Boys Clothing', 'boys-clothing', 'Fashionable clothing for boys', TRUE, 1),
-('Girls Clothing', 'girls-clothing', 'Stylish clothing for girls', TRUE, 2),
-('Baby Clothing', 'baby-clothing', 'Comfortable clothing for babies', TRUE, 3),
-('Footwear', 'footwear', 'Kids footwear collection', TRUE, 4),
-('Accessories', 'accessories', 'Fashion accessories for kids', TRUE, 5)
-ON DUPLICATE KEY UPDATE name=name;
 

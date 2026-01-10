@@ -68,3 +68,6 @@ define('CATEGORY_IMAGE_PATH', '/assets/images/categories/');
 define('BANNER_IMAGE_PATH', '/assets/images/banners/');
 define('AVATAR_IMAGE_PATH', '/assets/images/avatars/');
 
+// Encryption Key for Settings (Change in production!)
+define('ENCRYPTION_KEY', 'change_this_to_a_secure_random_key_in_production_32_chars_min');
+

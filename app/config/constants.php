@@ -68,3 +68,7 @@ define('NOTIFICATION_TYPE_PRODUCT', 'product');
 define('DISCOUNT_TYPE_PERCENTAGE', 'percentage');
 define('DISCOUNT_TYPE_FIXED', 'fixed');
 
+// Category Status
+define('CATEGORY_STATUS_ACTIVE', 1);
+define('CATEGORY_STATUS_INACTIVE', 0);
+

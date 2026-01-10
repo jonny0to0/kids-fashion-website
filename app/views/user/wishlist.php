@@ -50,9 +50,9 @@ $pageTitle = 'My Wishlist';
                                 <?php endif; ?>
                             </div>
                             <button onclick="removeFromWishlist(<?php echo $item['product_id']; ?>)" 
-                                    class="text-red-600 hover:text-red-800">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path>
+                                    class="text-red-600 hover:text-red-800" title="Remove from wishlist">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
                             </button>
                         </div>
@@ -64,50 +64,65 @@ $pageTitle = 'My Wishlist';
 </div>
 
 <script>
-function removeFromWishlist(productId) {
-    if (confirm('Remove this item from your wishlist?')) {
-        const formData = new FormData();
-        formData.append('product_id', productId);
-        
-        const siteUrl = window.SITE_URL || '<?php echo SITE_URL; ?>';
-        
-        fetch(siteUrl + '/user/wishlistRemove', {
-            method: 'POST',
-            body: formData,
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                if (typeof showToast === 'function') {
-                    showToast(data.message || 'Item removed from wishlist', 'success');
-                }
-                // Reload after a short delay to show the toast
-                setTimeout(() => {
-                    location.reload();
-                }, 500);
-            } else {
-                if (typeof showToast === 'function') {
-                    showToast(data.message || 'Failed to remove item from wishlist', 'error');
-                } else {
-                    alert(data.message || 'Failed to remove item from wishlist');
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error removing from wishlist:', error);
-            if (typeof showToast === 'function') {
-                showToast('An error occurred. Please try again.', 'error');
-            } else {
-                alert('An error occurred. Please try again.');
-            }
-        });
+async function removeFromWishlist(productId) {
+    const result = await showConfirm(
+        'Remove from Wishlist',
+        'Remove this item from your wishlist?',
+        'Yes, Remove',
+        'Cancel',
+        'question'
+    );
+    
+    if (!result.isConfirmed) {
+        return;
     }
+    
+    const formData = new FormData();
+    formData.append('product_id', productId);
+    
+    const siteUrl = window.SITE_URL || '<?php echo SITE_URL; ?>';
+    
+    fetch(siteUrl + '/user/wishlistRemove', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Update wishlist count if provided
+            if (data.count !== undefined) {
+                const wishlistCountEl = document.getElementById('wishlist-count');
+                if (wishlistCountEl) {
+                    wishlistCountEl.textContent = data.count || 0;
+                    if (data.count > 0) {
+                        wishlistCountEl.style.display = 'flex';
+                    } else {
+                        wishlistCountEl.style.display = 'none';
+                    }
+                }
+            } else if (typeof updateWishlistCount === 'function') {
+                updateWishlistCount();
+            }
+            
+            showToast(data.message || 'Item removed from wishlist', 'success');
+            // Reload after a short delay to show the toast
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showToast(data.message || 'Failed to remove item from wishlist', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error removing from wishlist:', error);
+        showToast('An error occurred. Please try again.', 'error');
+    });
 }
 </script>
 

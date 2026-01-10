@@ -47,7 +47,7 @@
     </footer>
     
     <!-- JavaScript Files -->
-    <script src="<?php echo SITE_URL; ?>/assets/js/main.js"></script>
+    <script src="<?php echo SITE_URL; ?>/assets/js/hero-banner-slider.js"></script>
     <script src="<?php echo SITE_URL; ?>/assets/js/cart.js"></script>
     <script src="<?php echo SITE_URL; ?>/assets/js/product.js"></script>
 </body>

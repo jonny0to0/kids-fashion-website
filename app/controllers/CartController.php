@@ -7,10 +7,12 @@
 class CartController {
     private $cartModel;
     private $productModel;
+    private $wishlistModel;
     
     public function __construct() {
         $this->cartModel = new Cart();
         $this->productModel = new Product();
+        $this->wishlistModel = new Wishlist();
     }
     
     /**
@@ -41,6 +43,7 @@ class CartController {
         $productId = (int)($_POST['product_id'] ?? 0);
         $variantId = isset($_POST['variant_id']) && $_POST['variant_id'] ? (int)$_POST['variant_id'] : null;
         $quantity = (int)($_POST['quantity'] ?? 1);
+        $buyNow = isset($_POST['buy_now']) && $_POST['buy_now'] === '1';
         
         if (!$productId) {
             echo json_encode(['success' => false, 'message' => 'Product ID is required']);
@@ -56,6 +59,12 @@ class CartController {
         $price = $this->productModel->getPrice($product);
         
         $cart = $this->getCart();
+        
+        // If buy now, clear existing cart items first
+        if ($buyNow) {
+            $this->cartModel->clear($cart['cart_id']);
+        }
+        
         $this->cartModel->addItem($cart['cart_id'], $productId, $variantId, $quantity, $price);
         
         // Get updated cart count
@@ -64,8 +73,9 @@ class CartController {
         
         echo json_encode([
             'success' => true, 
-            'message' => 'Item added to cart',
-            'count' => (int)$count
+            'message' => $buyNow ? 'Proceeding to checkout' : 'Item added to cart',
+            'count' => (int)$count,
+            'buy_now' => $buyNow
         ]);
     }
     
@@ -121,6 +131,63 @@ class CartController {
             'message' => 'Item removed from cart',
             'count' => (int)$count
         ]);
+    }
+    
+    /**
+     * Save item for later (move to wishlist)
+     */
+    public function saveForLater() {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            return;
+        }
+        
+        // Require authentication for wishlist
+        if (!Session::isLoggedIn()) {
+            echo json_encode(['success' => false, 'message' => 'Please login to save items for later']);
+            return;
+        }
+        
+        $cartItemId = (int)($_POST['cart_item_id'] ?? 0);
+        
+        if (!$cartItemId) {
+            echo json_encode(['success' => false, 'message' => 'Cart item ID is required']);
+            return;
+        }
+        
+        // Get cart item details
+        $cartItem = $this->cartModel->query(
+            "SELECT ci.*, ci.product_id FROM cart_items ci WHERE ci.cart_item_id = ?",
+            [$cartItemId]
+        )->fetch();
+        
+        if (!$cartItem) {
+            echo json_encode(['success' => false, 'message' => 'Cart item not found']);
+            return;
+        }
+        
+        // Add to wishlist
+        $userId = Session::getUserId();
+        
+        if ($this->wishlistModel->add($userId, $cartItem['product_id'])) {
+            // Remove from cart
+            $this->cartModel->removeItem($cartItemId);
+            
+            // Get updated cart count
+            $cart = $this->getCart();
+            $total = $this->cartModel->getTotal($cart['cart_id']);
+            $count = $total['count'] ?? $total['total_quantity'] ?? $total['item_count'] ?? 0;
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Item saved for later',
+                'count' => (int)$count
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Item already in wishlist or failed to save']);
+        }
     }
     
     /**

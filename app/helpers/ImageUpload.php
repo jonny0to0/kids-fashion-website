@@ -7,7 +7,7 @@
 class ImageUpload {
     
     private $uploadDir;
-    private $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    private $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'];
     private $maxSize;
     
     public function __construct($uploadDir = null) {
@@ -22,8 +22,13 @@ class ImageUpload {
     
     /**
      * Upload image file
+     * @param array $file File data from $_FILES
+     * @param string $subfolder Subfolder within upload directory
+     * @param string $prefix Prefix for filename
+     * @param int|null $maxWidth Maximum width in pixels (optional, for validation only)
+     * @param int|null $maxHeight Maximum height in pixels (optional, for validation only)
      */
-    public function upload($file, $subfolder = '', $prefix = '') {
+    public function upload($file, $subfolder = '', $prefix = '', $maxWidth = null, $maxHeight = null) {
         // Validate file
         if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
             return ['success' => false, 'error' => 'No file uploaded'];
@@ -34,13 +39,41 @@ class ImageUpload {
         $mimeType = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
         
+        // Special handling for SVG files (they may be detected as text/plain or application/xml)
+        if ($mimeType === 'text/plain' || $mimeType === 'application/xml' || $mimeType === 'text/xml') {
+            $content = file_get_contents($file['tmp_name']);
+            if (strpos($content, '<svg') !== false || strpos($content, '<?xml') !== false) {
+                $mimeType = 'image/svg+xml';
+            }
+        }
+        
         if (!in_array($mimeType, $this->allowedTypes)) {
-            return ['success' => false, 'error' => 'Invalid file type'];
+            return ['success' => false, 'error' => 'Invalid file type. Allowed: PNG, JPG, SVG, WEBP, GIF, ICO'];
         }
         
         // Check file size
         if ($file['size'] > $this->maxSize) {
-            return ['success' => false, 'error' => 'File size exceeds maximum allowed size'];
+            $maxSizeMB = round($this->maxSize / 1024 / 1024, 2);
+            return ['success' => false, 'error' => "File size exceeds maximum allowed size ({$maxSizeMB}MB)"];
+        }
+        
+        // Validate image dimensions (skip for SVG as they're scalable)
+        if ($mimeType !== 'image/svg+xml' && ($maxWidth !== null || $maxHeight !== null)) {
+            $imageInfo = @getimagesize($file['tmp_name']);
+            if ($imageInfo === false) {
+                return ['success' => false, 'error' => 'Invalid image file or corrupted image'];
+            }
+            
+            $width = $imageInfo[0];
+            $height = $imageInfo[1];
+            
+            if ($maxWidth !== null && $width > $maxWidth) {
+                return ['success' => false, 'error' => "Image width ({$width}px) exceeds maximum allowed width ({$maxWidth}px)"];
+            }
+            
+            if ($maxHeight !== null && $height > $maxHeight) {
+                return ['success' => false, 'error' => "Image height ({$height}px) exceeds maximum allowed height ({$maxHeight}px)"];
+            }
         }
         
         // Generate unique filename
@@ -57,8 +90,21 @@ class ImageUpload {
         
         // Move uploaded file
         if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-            // Generate relative path
-            $relativePath = str_replace(PUBLIC_PATH, '', $targetPath);
+            // Generate relative path - normalize path separators for cross-platform compatibility
+            $normalizedPublicPath = str_replace('\\', '/', PUBLIC_PATH);
+            $normalizedTargetPath = str_replace('\\', '/', $targetPath);
+            $relativePath = str_replace($normalizedPublicPath, '', $normalizedTargetPath);
+            
+            // Ensure path starts with / for consistency
+            if (substr($relativePath, 0, 1) !== '/') {
+                $relativePath = '/' . $relativePath;
+            }
+            
+            // Verify file was actually saved
+            if (!file_exists($targetPath)) {
+                return ['success' => false, 'error' => 'File was not saved correctly'];
+            }
+            
             return [
                 'success' => true,
                 'filename' => $filename,
@@ -179,10 +225,57 @@ class ImageUpload {
             'image/jpeg' => 'jpg',
             'image/png' => 'png',
             'image/gif' => 'gif',
-            'image/webp' => 'webp'
+            'image/webp' => 'webp',
+            'image/svg+xml' => 'svg',
+            'image/x-icon' => 'ico',
+            'image/vnd.microsoft.icon' => 'ico'
         ];
         
         return $extensions[$mimeType] ?? 'jpg';
+    }
+    
+    /**
+     * Validate and resize image to fit within constraints while maintaining aspect ratio
+     * @param string $filepath Full path to image file
+     * @param int $maxWidth Maximum width
+     * @param int $maxHeight Maximum height
+     * @return array Result with success status and dimensions
+     */
+    public function constrainImage($filepath, $maxWidth, $maxHeight) {
+        // Skip SVG files as they're vector-based
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $filepath);
+        finfo_close($finfo);
+        
+        if ($mimeType === 'image/svg+xml') {
+            return ['success' => true, 'message' => 'SVG files do not need resizing'];
+        }
+        
+        $imageInfo = @getimagesize($filepath);
+        if ($imageInfo === false) {
+            return ['success' => false, 'error' => 'Invalid image file'];
+        }
+        
+        $currentWidth = $imageInfo[0];
+        $currentHeight = $imageInfo[1];
+        
+        // Calculate new dimensions maintaining aspect ratio
+        $ratio = min($maxWidth / $currentWidth, $maxHeight / $currentHeight);
+        
+        // Only resize if image exceeds constraints
+        if ($ratio < 1) {
+            $newWidth = (int)($currentWidth * $ratio);
+            $newHeight = (int)($currentHeight * $ratio);
+            
+            $result = $this->resize($filepath, $newWidth, $newHeight);
+            if ($result) {
+                return ['success' => true, 'width' => $newWidth, 'height' => $newHeight, 'resized' => true];
+            } else {
+                return ['success' => false, 'error' => 'Failed to resize image'];
+            }
+        }
+        
+        return ['success' => true, 'width' => $currentWidth, 'height' => $currentHeight, 'resized' => false];
     }
 }
 

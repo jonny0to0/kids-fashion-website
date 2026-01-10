@@ -163,8 +163,29 @@ class Pagination {
             return '?' . http_build_query($query);
         }
         
-        $separator = strpos($this->baseUrl, '?') !== false ? '&' : '?';
-        return $this->baseUrl . $separator . 'page=' . $page;
+        // Parse existing query parameters from baseUrl and current GET params
+        $urlParts = parse_url($this->baseUrl);
+        $queryParams = [];
+        
+        // Get existing query params from baseUrl
+        if (!empty($urlParts['query'])) {
+            parse_str($urlParts['query'], $queryParams);
+        }
+        
+        // Merge with current GET params (excluding page)
+        foreach ($_GET as $key => $value) {
+            if ($key !== 'page' && !isset($queryParams[$key])) {
+                $queryParams[$key] = $value;
+            }
+        }
+        
+        // Set the page parameter
+        $queryParams['page'] = $page;
+        
+        // Rebuild URL
+        $basePath = isset($urlParts['path']) ? $urlParts['path'] : $this->baseUrl;
+        $separator = strpos($basePath, '?') !== false ? '&' : '?';
+        return $basePath . $separator . http_build_query($queryParams);
     }
 }
 

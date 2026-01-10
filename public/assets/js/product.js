@@ -24,20 +24,3 @@ document.addEventListener('DOMContentLoaded', function() {
     initProductGallery();
 });
 
-// Quantity controls
-function increaseQuantity(input) {
-    const max = parseInt(input.getAttribute('max')) || 999;
-    const current = parseInt(input.value) || 1;
-    if (current < max) {
-        input.value = current + 1;
-    }
-}
-
-function decreaseQuantity(input) {
-    const min = parseInt(input.getAttribute('min')) || 1;
-    const current = parseInt(input.value) || 1;
-    if (current > min) {
-        input.value = current - 1;
-    }
-}
-

@@ -36,9 +36,16 @@
                         </a>
                         <?php if ($order['order_status'] === 'pending' || $order['order_status'] === 'confirmed'): ?>
                             <a href="<?php echo SITE_URL; ?>/order/cancel/<?php echo $order['order_number']; ?>" 
-                               class="text-red-600 hover:underline"
-                               onclick="return confirm('Are you sure you want to cancel this order?');">
+                               class="text-red-600 hover:underline cancel-order-link"
+                               data-order-number="<?php echo htmlspecialchars($order['order_number']); ?>">
                                 Cancel Order
+                            </a>
+                        <?php endif; ?>
+                        <?php if ($order['order_status'] === 'cancelled'): ?>
+                            <a href="<?php echo SITE_URL; ?>/order/delete/<?php echo $order['order_number']; ?>" 
+                               class="text-red-600 hover:underline delete-order-link"
+                               data-order-number="<?php echo htmlspecialchars($order['order_number']); ?>">
+                                Delete
                             </a>
                         <?php endif; ?>
                     </div>
@@ -55,4 +62,46 @@
         </div>
     <?php endif; ?>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cancelLinks = document.querySelectorAll('.cancel-order-link');
+    cancelLinks.forEach(link => {
+        link.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const orderNumber = this.getAttribute('data-order-number');
+            const result = await showConfirm(
+                'Cancel Order',
+                'Are you sure you want to cancel this order? This action cannot be undone.',
+                'Yes, Cancel',
+                'No, Keep Order',
+                'warning'
+            );
+            
+            if (result.isConfirmed) {
+                window.location.href = this.href;
+            }
+        });
+    });
+    
+    const deleteLinks = document.querySelectorAll('.delete-order-link');
+    deleteLinks.forEach(link => {
+        link.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const orderNumber = this.getAttribute('data-order-number');
+            const result = await showConfirm(
+                'Delete Order',
+                'Are you sure you want to permanently delete this cancelled order from your order history? This action cannot be undone.',
+                'Yes, Delete',
+                'No, Keep Order',
+                'warning'
+            );
+            
+            if (result.isConfirmed) {
+                window.location.href = this.href;
+            }
+        });
+    });
+});
+</script>
 
