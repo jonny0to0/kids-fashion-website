@@ -54,7 +54,8 @@ sort($sizes); // Sort sizes logically
                     <span class="font-bold text-sm text-green-700">
                         <?php echo number_format($rating['avg_rating'], 1); ?>
                     </span>
-                    <svg class="w-3.5 h-3.5 text-green-600 fill-current" viewBox="0 0 20 20">
+                    <svg width="14" height="14" style="width: 14px; height: 14px;"
+                        class="w-3.5 h-3.5 text-green-600 fill-current" viewBox="0 0 20 20">
                         <path
                             d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
                     </svg>
@@ -99,13 +100,13 @@ sort($sizes); // Sort sizes logically
 
             <!-- COLUMN 2: Main Product Image (Center - Tablet & Desktop) / Top (Mobile) -->
             <div class="md:col-span-6 lg:col-span-6 xl:col-span-5 product-media-col lg:order-2"
-                style="z-index: 50; position: relative;">
-                <div class="product-media-sticky-wrapper" style="overflow: visible;">
+                style="position: relative;">
+                <div class="product-media-sticky-wrapper product-media-sticky" style="overflow: visible;">
                     <div class="relative">
                         <!-- Wishlist Icon (Top Right Corner) -->
                         <?php if (!Session::isAdmin()): ?>
                             <button onclick="toggleWishlist(<?php echo $product['product_id']; ?>)"
-                                class="wishlist-btn-<?php echo $product['product_id']; ?> <?php echo $inWishlist ? 'in-wishlist' : ''; ?> absolute top-2 right-2 z-20 bg-white/90 backdrop-blur-sm hover:bg-white p-2 rounded-full shadow-lg transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                class="wishlist-btn-<?php echo $product['product_id']; ?> <?php echo $inWishlist ? 'in-wishlist' : ''; ?> absolute top-2 right-2 z-40 bg-white/90 backdrop-blur-sm hover:bg-white p-2 rounded-full shadow-lg transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-pink-500"
                                 title="<?php echo $inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'; ?>"
                                 aria-label="<?php echo $inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'; ?>">
                                 <svg class="w-5 h-5 <?php echo $inWishlist ? 'text-pink-600 fill-current' : 'text-gray-700'; ?>"
@@ -287,7 +288,8 @@ sort($sizes); // Sort sizes logically
                                         aria-label="<?php echo number_format($rating['avg_rating'], 1); ?> out of 5 stars">
                                         <div class="ratings-stars" aria-hidden="true">
                                             <?php for ($i = 1; $i <= 5; $i++): ?>
-                                                <svg class="star-icon <?php echo $i <= round($rating['avg_rating']) ? 'fill-current text-yellow-400' : 'text-gray-300'; ?>"
+                                                <svg width="20" height="20" style="width: 20px; height: 20px;"
+                                                    class="star-icon <?php echo $i <= round($rating['avg_rating']) ? 'fill-current text-yellow-400' : 'text-gray-300'; ?>"
                                                     viewBox="0 0 20 20" aria-hidden="true">
                                                     <path
                                                         d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
@@ -308,7 +310,8 @@ sort($sizes); // Sort sizes logically
                                 <div class="ratings-no-reviews">
                                     <div class="ratings-stars-empty" role="img" aria-label="No ratings yet">
                                         <?php for ($i = 1; $i <= 5; $i++): ?>
-                                            <svg class="star-icon text-gray-300" fill="currentColor" viewBox="0 0 20 20"
+                                            <svg width="20" height="20" style="width: 20px; height: 20px;"
+                                                class="star-icon text-gray-300" fill="currentColor" viewBox="0 0 20 20"
                                                 aria-hidden="true">
                                                 <path
                                                     d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
@@ -395,7 +398,8 @@ sort($sizes); // Sort sizes logically
                             <ul class="space-y-1.5" id="highlights-list">
                                 <?php foreach ($highlights as $highlight): ?>
                                     <li class="flex items-start gap-2 text-sm text-gray-700">
-                                        <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="currentColor"
+                                        <svg width="16" height="16" style="width: 16px; height: 16px;"
+                                            class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="currentColor"
                                             viewBox="0 0 20 20" aria-hidden="true">
                                             <path fill-rule="evenodd"
                                                 d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -847,7 +851,8 @@ sort($sizes); // Sort sizes logically
                             </span>
                             <div class="flex text-yellow-400 my-2">
                                 <?php for ($i = 1; $i <= 5; $i++): ?>
-                                    <svg class="w-5 h-5 <?php echo $i <= round($rating['avg_rating']) ? 'fill-current' : 'text-gray-300'; ?>"
+                                    <svg width="20" height="20" style="width: 20px; height: 20px;"
+                                        class="w-5 h-5 <?php echo $i <= round($rating['avg_rating']) ? 'fill-current' : 'text-gray-300'; ?>"
                                         viewBox="0 0 20 20">
                                         <path
                                             d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
@@ -957,7 +962,8 @@ sort($sizes); // Sort sizes logically
                                     <div class="flex items-center gap-2 mb-2">
                                         <div class="flex text-yellow-400">
                                             <?php for ($i = 1; $i <= 5; $i++): ?>
-                                                <svg class="w-4 h-4 <?php echo $i <= $review['rating'] ? 'fill-current' : 'text-gray-300'; ?>"
+                                                <svg width="16" height="16" style="width: 16px; height: 16px;"
+                                                    class="w-4 h-4 <?php echo $i <= $review['rating'] ? 'fill-current' : 'text-gray-300'; ?>"
                                                     viewBox="0 0 20 20">
                                                     <path
                                                         d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
@@ -1032,34 +1038,69 @@ sort($sizes); // Sort sizes logically
 <!-- Review Submission Modal -->
 <div id="review-form-modal" class="hidden fixed inset-0 z-[60] overflow-y-auto" aria-labelledby="modal-title"
     role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"
             onclick="document.getElementById('review-form-modal').classList.add('hidden')"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
         <div
-            class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+            class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl w-full">
             <form action="<?php echo SITE_URL; ?>/product/submit_review" method="POST" enctype="multipart/form-data"
                 class="p-6">
                 <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>">
                 <input type="hidden" name="order_id" value="<?php echo $reviewEligibility['order_id'] ?? ''; ?>">
                 <input type="hidden" name="is_verified_purchase" value="1">
 
-                <div class="flex justify-between items-center mb-5">
-                    <h3 class="text-lg font-medium text-gray-900">Write a Review</h3>
-                    <button type="button" class="text-gray-400 hover:text-gray-500"
+                <!-- 1. Header (Reduced Height) -->
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-base font-bold text-gray-900">Write a Review</h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none"
                         onclick="document.getElementById('review-form-modal').classList.add('hidden')">
-                        <span class="text-2xl">&times;</span>
+                        <span class="text-2xl leading-none">&times;</span>
                     </button>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Overall Rating</label>
-                    <div class="flex items-center gap-2" id="star-rating-input">
+                <!-- 2. Product Info (Inline) -->
+                <div class="flex items-center gap-3 mb-3 pb-3 border-b border-gray-100">
+                    <div class="w-10 h-10 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                        <?php
+                        $thumb = !empty($images) ? $images[0]['image_url'] : '';
+                        ?>
+                        <?php if ($thumb): ?>
+                            <img src="<?php echo SITE_URL . $thumb; ?>" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <svg class="w-full h-full text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        <?php endif; ?>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium text-gray-900 truncate">
+                            <?php echo htmlspecialchars($product['name']); ?>
+                        </p>
+                        <p class="text-xs text-gray-500 truncate">
+                            <?php
+                            $variantParts = [];
+                            if (!empty($variants)) {
+                                // Just show "select variant" or similar if generic, but usually we know the order variant?
+                                // For now, just show generic text or leave empty if dynamic
+                            }
+                            ?>
+                            Share your experience
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 3. Rating Section (Inline) -->
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-medium text-gray-700">Rating:</span>
+                    <div class="flex items-center gap-1" id="star-rating-input">
                         <?php for ($i = 1; $i <= 5; $i++): ?>
                             <button type="button"
-                                class="star-input text-gray-300 hover:text-yellow-400 focus:outline-none transition-colors"
+                                class="star-input text-gray-300 hover:text-yellow-400 focus:outline-none transition-colors p-1"
                                 data-value="<?php echo $i; ?>" onclick="setRating(<?php echo $i; ?>)">
-                                <svg class="w-8 h-8 fill-current" viewBox="0 0 20 20">
+                                <svg width="24" height="24" style="width: 24px; height: 24px;" class="w-6 h-6 fill-current"
+                                    viewBox="0 0 20 20">
                                     <path
                                         d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
                                 </svg>
@@ -1069,34 +1110,54 @@ sort($sizes); // Sort sizes logically
                     <input type="hidden" name="rating" id="rating-value" required>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Add a Headline</label>
+                <!-- 4. Review Title & Textarea (Smart Height) -->
+                <div class="space-y-4 mb-2">
                     <input type="text" name="title"
-                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring focus:ring-pink-500 focus:ring-opacity-50 text-sm"
-                        placeholder="What's most important to know?" required>
+                        class="block w-full border-0 border-b border-gray-200 focus:border-pink-500 focus:ring-0 p-3 text-sm font-medium placeholder-gray-400 bg-transparent transition-colors"
+                        placeholder="Headline (optional)">
+
+                    <textarea name="review_text" rows="1"
+                        class="review-textarea w-full rounded-lg border border-gray-200 focus:border-pink-500 focus:ring-0 text-sm p-3 bg-white placeholder-gray-400 transition-colors"
+                        placeholder="Write your review..." required></textarea>
                 </div>
 
+                <!-- 5. Image Upload (Hidden by Default) -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Add a Photo</label>
-                    <input type="file" name="review_images[]" multiple accept="image/*"
-                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100">
+                    <div class="flex items-center">
+                        <button type="button"
+                            class="photo-upload-trigger text-sm font-medium flex items-center gap-2 py-2"
+                            onclick="togglePhotoUpload()">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
+                                </path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Add Photos (optional)
+                        </button>
+                    </div>
+
+                    <div id="photo-upload-section"
+                        class="hidden mt-2 p-3 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                        <input type="file" name="review_images[]" multiple accept="image/*"
+                            class="block w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-pink-100 file:text-pink-700 hover:file:bg-pink-200">
+                        <p class="text-xs text-gray-400 mt-1 pl-1">Max 3 images.</p>
+                    </div>
                 </div>
 
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Written Review</label>
-                    <textarea name="review_text" rows="4"
-                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring focus:ring-pink-500 focus:ring-opacity-50 text-sm"
-                        placeholder="What did you like or dislike? What did you use this product for?"></textarea>
+                <!-- 6. Submit Button (Right Aligned & Compact) -->
+                <div class="flex justify-end">
+                    <button type="submit"
+                        class="bg-pink-600 text-white rounded-lg shadow-sm py-2 px-6 text-sm font-semibold hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 transition-colors">
+                        Submit Review
+                    </button>
                 </div>
-
-                <button type="submit"
-                    class="w-full bg-pink-600 border border-transparent rounded-md shadow-sm py-2 px-4 text-sm font-medium text-white hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500">
-                    Submit Review
-                </button>
             </form>
         </div>
     </div>
 </div>
+
 
 <script>
     function setRating(val) {
@@ -2171,20 +2232,20 @@ sort($sizes); // Sort sizes logically
     "availability": "<?php echo ($product['stock_quantity'] > 0) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'; ?>"
   }
   <?php if ($rating['total_reviews'] > 0): ?>
-                      ,"aggregateRating": {
-                        "@type": "AggregateRating",
-                        "ratingValue": "<?php echo $rating['avg_rating']; ?>",
-                        "reviewCount": "<?php echo $rating['total_reviews']; ?>"
-                      },
-                      "review": [
-                        <?php
-                        $schemaReviews = [];
-                        foreach ($reviews as $r) {
-                            $reviewBody = json_encode(strip_tags($r['review_text']));
-                            $reviewTitle = json_encode(strip_tags($r['title']));
-                            $author = json_encode($r['first_name'] . ' ' . $r['last_name']);
-                            $date = date('Y-m-d', strtotime($r['created_at']));
-                            $schemaReviews[] = "{
+                                                                          ,"aggregateRating": {
+                                                                            "@type": "AggregateRating",
+                                                                            "ratingValue": "<?php echo $rating['avg_rating']; ?>",
+                                                                            "reviewCount": "<?php echo $rating['total_reviews']; ?>"
+                                                                          },
+                                                                          "review": [
+                                                                            <?php
+                                                                            $schemaReviews = [];
+                                                                            foreach ($reviews as $r) {
+                                                                                $reviewBody = json_encode(strip_tags($r['review_text']));
+                                                                                $reviewTitle = json_encode(strip_tags($r['title']));
+                                                                                $author = json_encode($r['first_name'] . ' ' . $r['last_name']);
+                                                                                $date = date('Y-m-d', strtotime($r['created_at']));
+                                                                                $schemaReviews[] = "{
             \"@type\": \"Review\",
             \"reviewRating\": {
               \"@type\": \"Rating\",
@@ -2198,10 +2259,10 @@ sort($sizes); // Sort sizes logically
             \"reviewBody\": $reviewBody,
             \"name\": $reviewTitle
         }";
-                        }
-                        echo implode(',', $schemaReviews);
-                        ?>
-                      ]
+                                                                            }
+                                                                            echo implode(',', $schemaReviews);
+                                                                            ?>
+                                                                          ]
   <?php endif; ?>
 }
 </script>

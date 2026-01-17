@@ -67,11 +67,56 @@ class OrderController
         }
 
         $userId = Session::getUserId();
+
+        // processing filters
+        $filters = [
+            'status' => isset($_GET['status']) ? (is_array($_GET['status']) ? $_GET['status'] : explode(',', $_GET['status'])) : [],
+            'time' => isset($_GET['time']) ? $_GET['time'] : 'last_30_days', // Default to last 30 days
+            'search' => isset($_GET['search']) ? trim($_GET['search']) : ''
+        ];
+
+        // Clean up empty status array
+        if (empty($filters['status'][0])) {
+            $filters['status'] = [];
+        }
+
         $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
-        $orders = $this->orderModel->getUserOrders($userId, $page);
+        $perPage = 10;
+
+        // Get orders with filters
+        $orders = $this->orderModel->getUserOrdersFiltered($userId, $filters, $page, $perPage);
+        $totalOrders = $this->orderModel->getUserOrdersFilteredCount($userId, $filters);
+
+        // Enrich orders with items for the UI
+        require_once APP_PATH . '/models/Review.php';
+        $reviewModel = new Review();
+
+        foreach ($orders as &$order) {
+            $order['items'] = $this->orderModel->getOrderItems($order['order_id']);
+
+            // Check review status for each item
+            foreach ($order['items'] as &$item) {
+                $existingReview = $reviewModel->findOne([
+                    'user_id' => $userId,
+                    'product_id' => $item['product_id']
+                ]);
+                $item['has_reviewed'] = !empty($existingReview);
+                $item['review_rating'] = $existingReview['rating'] ?? null;
+                $item['review_id'] = $existingReview['review_id'] ?? null;
+            }
+        }
+        unset($order); // Break reference
+
+        $totalPages = ceil($totalOrders / $perPage);
 
         $this->render('order/index', [
-            'orders' => $orders
+            'orders' => $orders,
+            'filters' => $filters,
+            'pagination' => [
+                'current_page' => $page,
+                'total_pages' => $totalPages,
+                'total_orders' => $totalOrders
+            ]
         ]);
     }
 
@@ -112,8 +157,7 @@ class OrderController
         foreach ($items as &$item) {
             $existingReview = $reviewModel->findOne([
                 'user_id' => $userId,
-                'product_id' => $item['product_id'],
-                'order_id' => $order['order_id']
+                'product_id' => $item['product_id']
             ]);
             $item['has_reviewed'] = !empty($existingReview);
             $item['review_id'] = $existingReview['review_id'] ?? null;

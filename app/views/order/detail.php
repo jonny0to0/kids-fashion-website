@@ -30,7 +30,8 @@ if (!isset($billingAddress)) {
                 <h1 class="text-3xl font-bold mb-2">Order Details</h1>
                 <p class="text-gray-600">Order #<?php echo htmlspecialchars($order['order_number']); ?></p>
                 <p class="text-sm text-gray-500 mt-1">Placed on
-                    <?php echo date('F d, Y \a\t g:i A', strtotime($order['created_at'])); ?></p>
+                    <?php echo date('F d, Y \a\t g:i A', strtotime($order['created_at'])); ?>
+                </p>
             </div>
 
             <!-- Order Status -->

@@ -708,7 +708,13 @@ document.addEventListener('DOMContentLoaded', function () {
             this.style.opacity = '0.7';
             this.disabled = true;
 
-            fetch(`${siteUrl}/product/check_eligibility?product_id=${productId}`)
+            fetch(`${siteUrl}/product/check_eligibility?product_id=${productId}`, {
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            })
                 .then(res => res.json())
                 .then(data => {
                     this.innerText = originalText;
@@ -754,10 +760,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
 
                     if (!data.delivered) {
+                        const statusText = data.order_status || 'PENDING';
+
+                        let title = 'Order Status: ' + statusText;
+                        let message = `Your order status is <b>${statusText}</b>.<br>You can only review this product after it has been <b>DELIVERED</b>.`;
+
+                        if (statusText === 'CANCELLED') {
+                            title = 'Order Was Cancelled';
+                            message = 'This order was cancelled. You can only review products from delivered orders.';
+                        }
+
                         Swal.fire({
                             icon: 'info',
-                            title: 'Order Not Delivered',
-                            text: 'You can only review this product after it has been delivered.',
+                            title: title,
+                            html: message,
                             confirmButtonColor: '#EC4899'
                         });
                         return;
@@ -789,4 +805,99 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
+
+    // Review Form Submission (AJAX) to prevent 404
+    const reviewForm = document.querySelector('#review-form-modal form');
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerText;
+            submitBtn.innerText = 'Submitting...';
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.7';
+
+            const formData = new FormData(this);
+
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    submitBtn.innerText = originalText;
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+
+                    if (data.success) {
+                        // Success
+                        document.getElementById('review-form-modal').classList.add('hidden');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: data.message,
+                            confirmButtonColor: '#EC4899'
+                        }).then(() => {
+                            // Optional: Reload to see review? Or just stay
+                            // window.location.reload(); 
+                            // Staying avoids reload, which is nicer. But form is dirty.
+                            reviewForm.reset();
+                        });
+                    } else {
+                        // Error
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Submission Failed',
+                            text: data.message || 'Unknown error occurred',
+                            confirmButtonColor: '#EC4899'
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('Review submit error:', err);
+                    submitBtn.innerText = originalText;
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'A network error occurred. Please try again.',
+                        confirmButtonColor: '#EC4899'
+                    });
+                });
+        });
+    }
 });
+
+/**
+ * Review Card Progressive Disclosure
+ */
+window.togglePhotoUpload = function () {
+    const section = document.getElementById('photo-upload-section');
+    if (section) {
+        section.classList.toggle('hidden');
+    }
+};
+
+// Auto-expand textarea on input (optional enhancement)
+document.addEventListener('DOMContentLoaded', function () {
+    const reviewTextarea = document.querySelector('.review-textarea');
+    if (reviewTextarea) {
+        reviewTextarea.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+
+            // Limit max height if needed, or let CSS handle overflowing
+            if (this.value === '') {
+                // Reset if empty to default CSS min-height
+                this.style.height = '';
+            }
+        });
+    }
+});
+

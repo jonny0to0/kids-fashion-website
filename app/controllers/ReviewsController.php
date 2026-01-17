@@ -22,87 +22,117 @@ class ReviewsController extends Controller
     /**
      * Submit a product review
      */
+    /**
+     * Submit a product review
+     */
     public function submit()
     {
-        // 1. Check if user is logged in
-        if (!Session::isLoggedIn()) {
-            Session::setFlash('error', 'You must be logged in to submit a review.');
-            $this->redirectBack();
-            exit;
+        $isJson = false;
+        $inputData = $_POST;
+
+        // Check if request is JSON
+        // Check if request is JSON or AJAX (for FormData/Multipart)
+        $contentType = isset($_SERVER["CONTENT_TYPE"]) ? trim($_SERVER["CONTENT_TYPE"]) : '';
+        if (strpos($contentType, 'application/json') !== false) {
+            $isJson = true;
+            $content = trim(file_get_contents("php://input"));
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) {
+                $inputData = $decoded;
+            }
+        } elseif (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            $isJson = true; // Treat as JSON response even if input is $_POST (FormData)
         }
 
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect('/');
-            exit;
+        try {
+            // 1. Check if user is logged in
+            if (!Session::isLoggedIn()) {
+                throw new Exception('You must be logged in to submit a review.');
+            }
+
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception('Invalid request method');
+            }
+
+            // 2. Validate Input
+            $orderId = $inputData['order_id'] ?? null;
+            $productId = $inputData['product_id'] ?? null;
+            $rating = $inputData['rating'] ?? null;
+            $reviewText = $inputData['comment'] ?? ($inputData['review_text'] ?? '');
+            $title = $inputData['title'] ?? '';
+            $userId = Session::getUserId();
+
+            if (!$orderId || !$productId || !$rating) {
+                throw new Exception('Missing required information.');
+            }
+
+            // 3. Validate Order Status (BUSINESS RULE STRICT CHECK)
+            $order = $this->orderModel->find($orderId);
+
+            if (!$order) {
+                throw new Exception('Order reference not found.');
+            }
+
+            if ($order['user_id'] != $userId) {
+                throw new Exception('Unauthorized access to order.');
+            }
+
+            // RULE: Only DELIVERED or COMPLETED orders can be reviewed
+            $orderStatus = strtoupper($order['order_status']);
+            $allowedStatuses = ['DELIVERED', 'COMPLETED'];
+
+            if (!in_array($orderStatus, $allowedStatuses)) {
+                throw new Exception('You can only review products from delivered or completed orders.');
+            }
+
+            // 4. Validate Duplicate Review (BUSINESS RULE)
+            $existingReview = $this->reviewModel->findOne([
+                'user_id' => $userId,
+                'product_id' => $productId,
+                'order_id' => $orderId
+            ]);
+
+            if ($existingReview) {
+                throw new Exception('You have already reviewed this product for this order.');
+            }
+
+            // 5. Submit Review
+            $data = [
+                'user_id' => $userId,
+                'product_id' => $productId,
+                'order_id' => $orderId,
+                'rating' => (int) $rating,
+                'title' => $title,
+                'review_text' => $reviewText,
+                'is_verified_purchase' => 1
+            ];
+
+            if ($this->reviewModel->submitReview($data)) {
+                $msg = 'Thank you! Your review has been submitted for approval.';
+                if ($isJson) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => $msg]);
+                    exit;
+                }
+                Session::setFlash('success', $msg);
+            } else {
+                throw new Exception('Failed to submit review. Please try again.');
+            }
+
+        } catch (Throwable $e) {
+            $msg = $e->getMessage();
+            // Log the error for debugging
+            error_log("Review Submission Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+
+            if ($isJson) {
+                header('Content-Type: application/json');
+                http_response_code(400); // Bad Request
+                echo json_encode(['success' => false, 'message' => $msg]);
+                exit;
+            }
+            Session::setFlash('error', $msg);
         }
 
-        // 2. Validate Input
-        $orderId = $_POST['order_id'] ?? null;
-        $productId = $_POST['product_id'] ?? null;
-        $rating = $_POST['rating'] ?? null;
-        $reviewText = $_POST['review_text'] ?? '';
-        $title = $_POST['title'] ?? ''; // Optional
-        $userId = Session::getUserId();
-
-        if (!$orderId || !$productId || !$rating) {
-            Session::setFlash('error', 'Missing required information.');
-            $this->redirectBack();
-            exit;
-        }
-
-        // 3. Validate Order Status (BUSINESS RULE STRICT CHECK)
-        $order = $this->orderModel->find($orderId);
-
-        if (!$order) {
-            Session::setFlash('error', 'Order reference not found.');
-            $this->redirectBack();
-            exit;
-        }
-
-        if ($order['user_id'] != $userId) {
-            Session::setFlash('error', 'Unauthorized access to order.');
-            $this->redirectBack();
-            exit;
-        }
-
-        // RULE: Only DELIVERED orders can be reviewed
-        if (strtoupper($order['order_status']) !== 'DELIVERED') {
-            Session::setFlash('error', 'You can only review products from delivered orders.');
-            $this->redirectBack();
-            exit;
-        }
-
-        // 4. Validate Duplicate Review (BUSINESS RULE)
-        $existingReview = $this->reviewModel->findOne([
-            'user_id' => $userId,
-            'product_id' => $productId,
-            'order_id' => $orderId
-        ]);
-
-        if ($existingReview) {
-            Session::setFlash('error', 'You have already reviewed this product for this order.');
-            $this->redirectBack();
-            exit;
-        }
-
-        // 5. Submit Review
-        $data = [
-            'user_id' => $userId,
-            'product_id' => $productId,
-            'order_id' => $orderId,
-            'rating' => (int) $rating,
-            'title' => $title,
-            'review_text' => $reviewText,
-            'is_verified_purchase' => 1 // It's linked to an order, so yes
-        ];
-
-        if ($this->reviewModel->submitReview($data)) {
-            Session::setFlash('success', 'Thank you! Your review has been submitted for approval.');
-        } else {
-            Session::setFlash('error', 'Failed to submit review. Please try again.');
-        }
-
-        $this->redirectBack();
         $this->redirectBack();
     }
 
@@ -136,35 +166,26 @@ class ReviewsController extends Controller
 
         $response = [
             'logged_in' => true,
-            'purchased' => true,
-            'delivered' => true,
-            'eligible' => $status['eligible'],
-            'order_id' => $status['order_id'] ?? null
+            'purchased' => false,
+            'delivered' => false,
+            'eligible' => false,
+            'order_id' => $status['order_id'] ?? null,
+            'order_status' => $status['current_status'] ?? null
         ];
 
-        if ($status['status'] === 'not_purchased') {
-            $response['purchased'] = false;
-            $response['delivered'] = false;
+        // Status alignment
+        if ($status['status'] === 'eligible') {
+            $response['purchased'] = true;
+            $response['delivered'] = true;
+            $response['eligible'] = true;
+        } elseif ($status['status'] === 'not_purchased') {
+            // Defaults are already false
         } elseif ($status['status'] === 'not_delivered') {
             $response['purchased'] = true;
-            $response['delivered'] = false;
+            // delivered and eligible remain false
         } elseif ($status['status'] === 'already_reviewed') {
-            // Treat as eligible=false but technically purchased/delivered could be true.
-            // For the frontend prompt logic:
-            // "If not purchased -> Purchase Required"
-            // "If not delivered -> Order Not Delivered"
-            // "If already reviewed" -> (Implicitly delivered usually, but let's just send a flag if needed or handle as eligible=false)
-            // The user request logic chart didn't explicitly handle "Already Reviewed" popup, but simpler to just say not eligible usually.
-            // However, the user prompt logic flow is:
-            // 1. Logged In?
-            // 2. Purchased?
-            // 3. Delivered?
-            // -> Open Form.
-
-            // If already reviewed, we might want to block or let them edit?
-            // User didn't specify "Already Reviewed" popup behavior in "FINAL FLOW".
-            // But existing Detail page handles it.
-            // Let's add 'already_reviewed' to response for clarity.
+            $response['purchased'] = true;
+            $response['delivered'] = true; // Technically delivered if reviewed, usually
             $response['already_reviewed'] = true;
         }
 

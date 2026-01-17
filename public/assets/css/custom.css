@@ -1,4 +1,7 @@
 /* Custom Styles for Kid Bazar */
+:root {
+    --header-offset: 112px;
+}
 
 /* Expandable Content "See More" Button */
 .see-more-btn {
@@ -12,11 +15,13 @@
     transition: color 0.2s;
     background: none;
     border: none;
-    color: inherit; /* Inherit or set default */
+    color: inherit;
+    /* Inherit or set default */
 }
 
 .see-more-btn:hover {
-    color: #be185d; /* Pink-700 equivalent */
+    color: #be185d;
+    /* Pink-700 equivalent */
 }
 
 /* Icon Styles - FIXED SIZE ALWAYS */
@@ -80,5 +85,52 @@
 }
 
 .attr-table td:last-child {
-    color: #6b7280;
+    overflow-y: hidden;
+    /* Hide scroll until expanded */
+}
+
+.review-textarea:focus {
+    min-height: 120px;
+    /* Expand on focus */
+    overflow-y: auto;
+}
+
+/* Photo Upload Toggle */
+#photo-upload-section {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Star Input sizing adjustments if needed */
+.star-input svg {
+    transition: transform 0.1s;
+}
+
+.star-input:hover svg {
+    transform: scale(1.1);
+}
+
+/* Custom file input trigger styling */
+.photo-upload-trigger {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: #4b5563;
+    transition: color 0.2s;
+}
+
+.photo-upload-trigger:hover {
+    color: #db2777;
+    /* pink-600 */
+}
+
+/* Product Details Sticky Image Fix */
+@media (min-width: 1024px) {
+    .product-media-sticky {
+        position: sticky;
+        top: var(--header-offset);
+        align-self: flex-start;
+        z-index: 10;
+        /* Lower than navbar (50) and category bar (40) */
+    }
 }

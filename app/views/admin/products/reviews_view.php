@@ -82,7 +82,7 @@
                 <?php endif; ?>
                 <div>
                     <h3 class="font-medium text-gray-900 text-lg">
-                        <a href="<?php echo SITE_URL . '/products/detail/' . $review['product_id']; ?>" target="_blank"
+                        <a href="<?php echo SITE_URL . '/product/detail/' . $review['product_slug']; ?>" target="_blank"
                             class="hover:text-pink-600 hover:underline">
                             <?php echo htmlspecialchars($review['product_name']); ?>
                         </a>

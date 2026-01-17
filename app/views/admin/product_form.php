@@ -359,17 +359,17 @@ require_once __DIR__ . '/_back_button.php';
                     <h2 class="text-xl font-bold text-gray-800 mb-4 mt-6">Product Images</h2>
 
                     <!-- Image Guidelines (Collapsible) -->
-                    <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="mb-6 bg-pink-50 border border-pink-200 rounded-lg p-4">
                         <button type="button" onclick="toggleImageGuidelines()"
                             class="w-full flex items-center justify-between text-left">
-                            <span class="font-semibold text-blue-800 flex items-center">
+                            <span class="font-semibold text-pink-800 flex items-center">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                                 Image Upload Guidelines
                             </span>
-                            <svg id="guidelines-icon" class="w-5 h-5 text-blue-800 transform transition-transform"
+                            <svg id="guidelines-icon" class="w-5 h-5 text-pink-800 transform transition-transform"
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M19 9l-7 7-7-7"></path>
@@ -424,7 +424,7 @@ require_once __DIR__ . '/_back_button.php';
                                                             Uploaded
                                                             <a href="<?php echo SITE_URL . $image['zoom_image_url']; ?>"
                                                                 target="_blank"
-                                                                class="text-xs text-blue-500 underline ml-2">View</a>
+                                                                class="text-xs text-pink-600 underline ml-2">View</a>
                                                         </div>
                                                     <?php else: ?>
                                                         <div class="text-sm text-gray-500 italic">None set</div>
@@ -438,7 +438,7 @@ require_once __DIR__ . '/_back_button.php';
                                                     <input type="file"
                                                         name="existing_zoom_images[<?php echo $image['image_id']; ?>]"
                                                         accept="image/*"
-                                                        class="w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                                        class="w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100">
                                                 </div>
                                             </div>
                                         </div>
@@ -516,7 +516,7 @@ require_once __DIR__ . '/_back_button.php';
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Zoom Image (Optional, High-Res)</label>
                                     <input type="file" name="new_images[${index}][zoom]" accept="image/*"
-                                           class="w-full border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-500 bg-blue-50">
+                                           class="w-full border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-500 bg-pink-50">
                                 </div>
                                 ${index > 0 || isEditMode ? `
                                 <button type="button" onclick="this.parentElement.remove()" class="absolute top-2 right-2 text-gray-400 hover:text-red-500">

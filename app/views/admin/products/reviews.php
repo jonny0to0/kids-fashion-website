@@ -78,7 +78,8 @@
                                     <?php endif; ?>
                                     <div>
                                         <div class="font-medium text-gray-800">
-                                            <?php echo htmlspecialchars($review['product_name']); ?></div>
+                                            <?php echo htmlspecialchars($review['product_name']); ?>
+                                        </div>
                                         <div class="text-sm text-gray-500"><?php echo htmlspecialchars($review['sku'] ?? ''); ?>
                                         </div>
                                     </div>
@@ -86,9 +87,11 @@
                             </td>
                             <td class="py-3 px-4">
                                 <div class="font-medium text-gray-800">
-                                    <?php echo htmlspecialchars($review['customer_name'] ?? 'N/A'); ?></div>
+                                    <?php echo htmlspecialchars($review['customer_name'] ?? 'N/A'); ?>
+                                </div>
                                 <div class="text-sm text-gray-500">
-                                    <?php echo htmlspecialchars($review['customer_email'] ?? ''); ?></div>
+                                    <?php echo htmlspecialchars($review['customer_email'] ?? ''); ?>
+                                </div>
                             </td>
                             <td class="py-3 px-4 text-center">
                                 <div class="flex items-center justify-center gap-1">
@@ -109,13 +112,19 @@
                                 </div>
                             </td>
                             <td class="py-3 px-4 text-center">
-                                <?php if (($review['is_approved'] ?? 0) == 1): ?>
-                                    <span
-                                        class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Approved</span>
-                                <?php else: ?>
-                                    <span
-                                        class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">Pending</span>
-                                <?php endif; ?>
+                                <?php
+                                $status = strtoupper($review['status'] ?? ($review['is_approved'] ? 'APPROVED' : 'PENDING'));
+                                $badgeClass = match ($status) {
+                                    'APPROVED' => 'bg-green-100 text-green-800',
+                                    'PENDING' => 'bg-yellow-100 text-yellow-800',
+                                    'REJECTED' => 'bg-red-100 text-red-800',
+                                    'HIDDEN' => 'bg-gray-100 text-gray-800',
+                                    default => 'bg-gray-100 text-gray-800'
+                                };
+                                ?>
+                                <span class="px-2 py-1 text-xs font-medium rounded-full <?php echo $badgeClass; ?>">
+                                    <?php echo ucfirst(strtolower($status)); ?>
+                                </span>
                             </td>
                             <td class="py-3 px-4 text-sm text-gray-600">
                                 <?php echo date('M d, Y', strtotime($review['created_at'] ?? 'now')); ?>

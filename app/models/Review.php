@@ -97,6 +97,9 @@ class Review extends Model
     /**
      * Check if user is eligible to review
      */
+    /**
+     * Check if user is eligible to review
+     */
     public function checkEligibility($userId, $productId)
     {
         // 1. Check if user already reviewed this product
@@ -111,12 +114,14 @@ class Review extends Model
 
         // 2. Check for delivered order containing this product
         // We need to check the 'orders' and 'order_items' tables
+        // STRICT: Only 'delivered' status allowed
         $sql = "SELECT o.order_id, o.delivered_at 
                 FROM orders o
                 JOIN order_items oi ON o.order_id = oi.order_id
                 WHERE o.user_id = ? 
                   AND oi.product_id = ? 
-                  AND o.order_status = 'delivered'
+                  AND (LOWER(TRIM(o.order_status)) = 'delivered' OR LOWER(TRIM(o.order_status)) = 'completed')
+                ORDER BY o.created_at DESC
                 LIMIT 1";
 
         $stmt = $this->query($sql, [$userId, $productId]);
@@ -149,7 +154,8 @@ class Review extends Model
                 FROM orders o
                 JOIN order_items oi ON o.order_id = oi.order_id
                 WHERE o.user_id = ? 
-                  AND oi.product_id = ?";
+                  AND oi.product_id = ?
+                ORDER BY o.created_at DESC";
 
         $stmt = $this->query($sql, [$userId, $productId]);
         $orders = $stmt->fetchAll();
@@ -160,29 +166,36 @@ class Review extends Model
 
         // 3. Check if any of those orders are DELIVERED
         $hasDelivered = false;
-        foreach ($orders as $order) {
-            if (strtoupper($order['order_status']) === 'DELIVERED') {
-                $hasDelivered = true;
-                break;
-            }
-        }
-
-        if (!$hasDelivered) {
-            return ['status' => 'not_delivered', 'eligible' => false];
-        }
-
-        // Return the first delivered order ID found
-        // In a real scenario with multiple orders, we might want the latest one.
-        // The loop above just checks existence. Let's capture the ID.
         $deliveredOrderId = null;
+
         foreach ($orders as $order) {
-            if (strtoupper($order['order_status']) === 'DELIVERED') {
+            $status = strtoupper(trim($order['order_status']));
+            if ($status === 'DELIVERED' || $status === 'COMPLETED') {
+                $hasDelivered = true;
                 $deliveredOrderId = $order['order_id'];
                 break;
             }
         }
 
-        return ['status' => 'eligible', 'eligible' => true, 'order_id' => $deliveredOrderId];
+        if (!$hasDelivered) {
+            // Find the most relevant status to show
+            $displayStatus = 'PENDING'; // Default
+            if (!empty($orders)) {
+                $displayStatus = strtoupper($orders[0]['order_status']);
+            }
+            return [
+                'status' => 'not_delivered',
+                'eligible' => false,
+                'current_status' => $displayStatus
+            ];
+        }
+
+        return [
+            'status' => 'eligible',
+            'eligible' => true,
+            'order_id' => $deliveredOrderId,
+            'current_status' => 'DELIVERED'
+        ];
     }
 
     /**
@@ -241,7 +254,10 @@ class Review extends Model
      */
     public function updateStatus($reviewId, $status, $adminId, $reason = null)
     {
-        $data = ['status' => $status];
+        $data = [
+            'status' => $status,
+            'is_approved' => ($status === 'APPROVED' ? 1 : 0)
+        ];
         $this->update($reviewId, $data);
 
         // Log action

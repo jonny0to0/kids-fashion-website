@@ -225,12 +225,25 @@ class ProductController
      */
     public function submit_review()
     {
+        // Detect AJAX request
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            if ($isAjax) {
+                http_response_code(405);
+                echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+                exit;
+            }
             http_response_code(405);
             return;
         }
 
         if (!Session::isLoggedIn()) {
+            if ($isAjax) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'message' => 'You must be logged in to submit a review.']);
+                exit;
+            }
             Session::setFlash('error', 'You must be logged in to submit a review.');
             header('Location: ' . SITE_URL . '/login');
             exit;
@@ -241,18 +254,35 @@ class ProductController
 
         // Prevent submission if not eligible (backend check)
         $eligibility = $this->reviewModel->checkEligibility($userId, $productId);
-        if (!$eligibility['eligible'] && ($eligibility['reason'] ?? '') !== 'no_delivered_order') {
-            // We allow 'no_delivered_order' to fall through for now if we want to be lenient, 
-            // OR strict: redirect with error.
-            // Given requirement "Conditional: Delivered Orders only", we should be strict.
-            // But let's check if the form overrides.
-            // The form inputs: 
+
+        // Strict Check: Must be eligible (Delivered order exists, not already reviewed)
+        if (!$eligibility['eligible']) {
+            $msg = 'You are not eligible to review this product. ' .
+                ($eligibility['reason'] === 'already_reviewed' ? 'You have already reviewed it.' : 'Purchase and delivery required.');
+
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => $msg]);
+                exit;
+            }
+
+            Session::setFlash('error', $msg);
+            header('Location: ' . SITE_URL . '/product/' . $this->productModel->find($productId)['slug']);
+            exit;
         }
 
-        // Strict check: if not eligible, block.
-        // Exception: Validation script mock might trigger this, but real user flow needs strictness.
-        if (!$eligibility['eligible']) {
-            Session::setFlash('error', 'You are not eligible to review this product.');
+        // Double check the submitted order_id if valid
+        $submittedOrderId = $_POST['order_id'] ?? null;
+        if ($submittedOrderId && $submittedOrderId != $eligibility['order_id']) {
+            $submittedOrderId = $eligibility['order_id'];
+        }
+
+        // Ensure we have a valid order ID to attach
+        if (!$submittedOrderId) {
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'No valid order found for this review.']);
+                exit;
+            }
+            Session::setFlash('error', 'No valid order found for this review.');
             header('Location: ' . SITE_URL . '/product/' . $this->productModel->find($productId)['slug']);
             exit;
         }
@@ -279,9 +309,9 @@ class ProductController
         $data = [
             'product_id' => $productId,
             'user_id' => $userId,
-            'order_id' => $_POST['order_id'] ?? null,
+            'order_id' => $submittedOrderId, // Use strict validated ID
             'rating' => (int) $_POST['rating'],
-            'title' => $_POST['title'],
+            'title' => $_POST['title'] ?? '',
             'review_text' => $_POST['review_text'],
             'media' => $media,
             'is_verified_purchase' => isset($_POST['is_verified_purchase']) ? 1 : 0
@@ -289,8 +319,18 @@ class ProductController
 
         try {
             $this->reviewModel->submitReview($data);
+
+            if ($isAjax) {
+                echo json_encode(['success' => true, 'message' => 'Review submitted successfully! It will be visible after approval.']);
+                exit;
+            }
+
             Session::setFlash('success', 'Review submitted successfully! It will be visible after approval.');
         } catch (Exception $e) {
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'Failed to submit review.']);
+                exit;
+            }
             Session::setFlash('error', 'Failed to submit review.');
         }
 
@@ -357,7 +397,8 @@ class ProductController
                 'logged_in' => false,
                 'purchased' => false,
                 'delivered' => false,
-                'eligible' => false
+                'eligible' => false,
+                'order_status' => null
             ]);
             exit;
         }
@@ -370,24 +411,32 @@ class ProductController
             exit;
         }
 
-        // Get detailed status
+        // Get detailed status from Model
         $status = $this->reviewModel->checkDetailedEligibility($userId, $productId);
 
         $response = [
             'logged_in' => true,
-            'purchased' => true,
-            'delivered' => true,
-            'eligible' => $status['eligible'],
-            'order_id' => $status['order_id'] ?? null
+            'purchased' => false, // Default unsafe
+            'delivered' => false, // Default unsafe
+            'eligible' => false,  // Default unsafe
+            'order_id' => $status['order_id'] ?? null,
+            'order_status' => $status['current_status'] ?? null // Critical for frontend msg
         ];
 
-        if ($status['status'] === 'not_purchased') {
+        if ($status['status'] === 'eligible') {
+            $response['purchased'] = true;
+            $response['delivered'] = true;
+            $response['eligible'] = true;
+        } elseif ($status['status'] === 'not_purchased') {
             $response['purchased'] = false;
             $response['delivered'] = false;
         } elseif ($status['status'] === 'not_delivered') {
             $response['purchased'] = true;
             $response['delivered'] = false;
         } elseif ($status['status'] === 'already_reviewed') {
+            $response['purchased'] = true;
+            $response['delivered'] = true; // Assuming past delivery
+            $response['eligible'] = false;
             $response['already_reviewed'] = true;
         }
 
