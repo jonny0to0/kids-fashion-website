@@ -230,6 +230,16 @@
             }
         }
         
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
         /* Smooth scroll header transitions */
         #main-nav-content {
             transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
@@ -529,6 +539,9 @@
     <!-- SweetAlert2 for beautiful notifications -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/custom.css">
+
     <!-- Load main.js before Alpine.js to ensure functions are available -->
     <script src="<?php echo SITE_URL; ?>/assets/js/main.js"></script>
     
@@ -696,7 +709,7 @@
              }
          }"
          :class="isVisible ? 'translate-y-0' : '-translate-y-full'">
-        <div class="container mx-auto px-4">
+        <div class="container mx-auto md:px-4">
             <!-- Desktop Categories Bar -->
             <div class="hidden md:flex items-center justify-start py-3 overflow-x-auto">
                 <div class="flex items-center space-x-1 lg:space-x-2">

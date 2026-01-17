@@ -1,0 +1,84 @@
+/* Custom Styles for Kid Bazar */
+
+/* Expandable Content "See More" Button */
+.see-more-btn {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding-top: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    color: inherit; /* Inherit or set default */
+}
+
+.see-more-btn:hover {
+    color: #be185d; /* Pink-700 equivalent */
+}
+
+/* Icon Styles - FIXED SIZE ALWAYS */
+.see-more-icon {
+    width: 16px;
+    height: 16px;
+    margin-left: 0.25rem;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+/* Expanded State for Icon Rotation */
+.see-more-btn.expanded .see-more-icon {
+    transform: rotate(180deg);
+}
+
+/* Expandable Content Transition */
+.expandable-content {
+    transition: max-height 0.5s ease-in-out;
+    will-change: max-height;
+    overflow: hidden;
+}
+
+.expandable-wrapper.collapsed .expandable-content {
+    position: relative;
+}
+
+/* Fade out effect when collapsed */
+.expandable-wrapper.collapsed .expandable-content::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.95));
+    pointer-events: none;
+}
+
+/* Attribute Table Styles */
+.attr-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.attr-table tr td {
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: top;
+}
+
+.attr-table tr:last-child td {
+    border-bottom: none;
+}
+
+.attr-table td:first-child {
+    width: 45%;
+    color: #111827;
+    padding-right: 1.5rem;
+}
+
+.attr-table td:last-child {
+    color: #6b7280;
+}
