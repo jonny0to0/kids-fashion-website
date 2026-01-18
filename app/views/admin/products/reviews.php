@@ -11,14 +11,15 @@
 
 <!-- Filters -->
 <div class="admin-card mb-6">
-    <form method="GET" action="<?php echo SITE_URL; ?>/admin/products/reviews" class="flex flex-wrap gap-4 items-end">
-        <div class="flex-1 min-w-[200px]">
+    <form method="GET" action="<?php echo SITE_URL; ?>/admin/products/reviews"
+        class="flex flex-col md:flex-row md:items-end gap-3">
+        <div class="flex-1 w-full md:w-auto">
             <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
             <input type="text" name="search" value="<?php echo htmlspecialchars($search ?? ''); ?>"
                 placeholder="Search by product, customer, or review..."
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
         </div>
-        <div class="min-w-[150px]">
+        <div class="w-full md:w-[150px]">
             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select name="status"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent">
@@ -30,12 +31,12 @@
                 </option>
             </select>
         </div>
-        <button type="submit" class="btn-pink-gradient px-6 py-2 rounded-lg font-medium">
+        <button type="submit" class="w-full md:w-auto btn-pink-gradient px-6 py-2 rounded-lg font-medium">
             Filter
         </button>
         <?php if (!empty($search) || ($statusFilter ?? 'all') !== 'all'): ?>
             <a href="<?php echo SITE_URL; ?>/admin/products/reviews"
-                class="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50">
+                class="w-full md:w-auto text-center px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50">
                 Clear
             </a>
         <?php endif; ?>

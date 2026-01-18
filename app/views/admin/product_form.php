@@ -6,7 +6,8 @@ require_once __DIR__ . '/_breadcrumb.php';
 require_once __DIR__ . '/_back_button.php';
 ?>
 
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-2 md:px-4 py-4 md:py-8">
+    <!-- px-4 -->
     <?php
     // Render breadcrumb
     renderBreadcrumb([
@@ -16,14 +17,14 @@ require_once __DIR__ . '/_back_button.php';
     ]);
     ?>
 
-    <div class="mb-8">
+    <div class="mb-4 md:mb-8">
         <div class="flex items-center">
             <h1 class="text-3xl font-bold text-gray-800"><?php echo $action; ?> Product</h1>
         </div>
         <?php renderBackButton('Products', '/admin/products', 'top-left'); ?>
     </div>
 
-    <div class="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow-md p-3 md:p-8 max-w-4xl mx-auto w-full">
         <?php if (!empty($errors)): ?>
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
                 <ul class="list-disc list-inside">
@@ -35,7 +36,7 @@ require_once __DIR__ . '/_back_button.php';
         <?php endif; ?>
 
         <form method="POST" enctype="multipart/form-data">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <!-- Basic Information -->
                 <div class="md:col-span-2">
                     <h2 class="text-xl font-bold text-gray-800 mb-4">Basic Information</h2>
@@ -107,7 +108,7 @@ require_once __DIR__ . '/_back_button.php';
 
                 <!-- Pricing -->
                 <div class="md:col-span-2">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 mt-6">Pricing & Inventory</h2>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3 mt-4 md:mb-4 md:mt-6">Pricing & Inventory</h2>
                 </div>
 
                 <div>
@@ -203,7 +204,7 @@ require_once __DIR__ . '/_back_button.php';
 
                     <!-- Common Attributes (Always visible) -->
                     <?php if (!empty($commonAttributes)): ?>
-                        <div class="mb-6">
+                        <div class="mb-4 md:mb-6">
                             <h3 class="text-lg font-semibold text-gray-700 mb-3">Other - </h3>
                             <!-- Common Attributes -->
                             <!-- <p class="text-sm text-gray-500 mb-4">These attributes are available for all products</p> -->
@@ -228,7 +229,7 @@ require_once __DIR__ . '/_back_button.php';
                     <?php endif; ?>
 
                     <!-- Category-Specific Attributes (Dynamic based on Category) -->
-                    <div class="mb-6">
+                    <div class="mb-4 md:mb-6">
                         <h3 class="text-lg font-semibold text-gray-700 mb-3">Category-Specific Attributes</h3>
                         <p class="text-sm text-gray-500 mb-4">Select a category to load relevant attributes</p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="category-attributes-container">
@@ -265,7 +266,7 @@ require_once __DIR__ . '/_back_button.php';
 
                 <!-- Status & Flags -->
                 <div class="md:col-span-2">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 mt-6">Status & Flags</h2>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3 mt-4 md:mb-4 md:mt-6">Status & Flags</h2>
                 </div>
 
                 <div>
@@ -279,7 +280,7 @@ require_once __DIR__ . '/_back_button.php';
                 </div>
 
                 <div class="md:col-span-2">
-                    <div class="flex gap-6">
+                    <div class="flex flex-col md:flex-row gap-3 md:gap-6">
                         <label class="flex items-center">
                             <input type="checkbox" name="is_featured" value="1" <?php echo ($product['is_featured'] ?? ($data['is_featured'] ?? 0)) ? 'checked' : ''; ?> class="mr-2">
                             <span class="text-gray-700">Featured Product</span>
@@ -298,7 +299,7 @@ require_once __DIR__ . '/_back_button.php';
 
                 <!-- Product Variants -->
                 <div class="md:col-span-2">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 mt-6">Product Variants</h2>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3 mt-4 md:mb-4 md:mt-6">Product Variants</h2>
                     <p class="text-sm text-gray-500 mb-4">Add size and color combinations with individual stock and
                         pricing</p>
 
@@ -349,17 +350,17 @@ require_once __DIR__ . '/_back_button.php';
                     </div>
 
                     <button type="button" onclick="addVariant()"
-                        class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm font-medium">
+                        class="w-full sm:w-auto bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm font-medium">
                         + Add Variant
                     </button>
                 </div>
 
                 <!-- Images -->
                 <div class="md:col-span-2">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4 mt-6">Product Images</h2>
+                    <h2 class="text-xl font-bold text-gray-800 mb-3 mt-4 md:mb-4 md:mt-6">Product Images</h2>
 
                     <!-- Image Guidelines (Collapsible) -->
-                    <div class="mb-6 bg-pink-50 border border-pink-200 rounded-lg p-4">
+                    <div class="mb-4 md:mb-6 bg-pink-50 border border-pink-200 rounded-lg p-3 md:p-4">
                         <button type="button" onclick="toggleImageGuidelines()"
                             class="w-full flex items-center justify-between text-left">
                             <span class="font-semibold text-pink-800 flex items-center">
@@ -461,8 +462,8 @@ require_once __DIR__ . '/_back_button.php';
                     <?php endif; ?>
 
                     <!-- Upload New Images -->
-                    <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                        <h3 class="font-bold text-gray-800 mb-4">Add New Images</h3>
+                    <div class="pt-4 md:pt-6">
+                        <h3 class="font-bold text-gray-800 mb-3 md:mb-4">Add New Images</h3>
 
 
                         <div id="new-images-container" class="space-y-4">
@@ -502,27 +503,49 @@ require_once __DIR__ . '/_back_button.php';
                             // Edit Mode: All optional
                             // Add Mode: Required
                             const requiredAttr = isEditMode ? '' : 'required';
-                            const requiredLabel = isEditMode ? '' : ' (Required)';
+                            const requiredLabel = isEditMode ? '' : ' <span class="text-red-500">*</span>';
+                            const rowLabel = index + 1;
 
                             const row = document.createElement('div');
-                            row.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white border border-gray-200 rounded shadow-sm relative';
+                            // Mobile: Minimal clean row | Desktop: Grid
+                            row.className = 'group relative border-b border-gray-100 pb-4 mb-4 last:border-0 last:mb-0 last:pb-0';
 
                             row.innerHTML = `
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Main Image${requiredLabel}</label>
-                                    <input type="file" name="new_images[${index}][main]" accept="image/*" ${requiredAttr}
-                                           class="w-full border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-sm font-semibold text-gray-500">Image Set #${rowLabel}</span>
+                                    ${index > 0 || isEditMode ? `
+                                    <button type="button" onclick="this.closest('.group').remove()" 
+                                        class="text-red-500 hover:text-red-700 p-1 transition-colors" title="Remove Image Set">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                    ` : ''}
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Zoom Image (Optional, High-Res)</label>
-                                    <input type="file" name="new_images[${index}][zoom]" accept="image/*"
-                                           class="w-full border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-500 bg-pink-50">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-1">
+                                        <label class="block text-sm font-medium text-gray-700">Main Image${requiredLabel}</label>
+                                        <input type="file" name="new_images[${index}][main]" accept="image/*" ${requiredAttr}
+                                               class="block w-full text-sm text-gray-500
+                                                      file:mr-4 file:py-2 file:px-4
+                                                      file:rounded-full file:border-0
+                                                      file:text-xs file:font-semibold
+                                                      file:bg-pink-50 file:text-pink-700
+                                                      hover:file:bg-pink-100
+                                                      cursor-pointer border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 transition-colors">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="block text-sm font-medium text-gray-700">Zoom Image <span class="text-gray-400 font-normal">(Optional)</span></label>
+                                        <input type="file" name="new_images[${index}][zoom]" accept="image/*"
+                                               class="block w-full text-sm text-gray-500
+                                                      file:mr-4 file:py-2 file:px-4
+                                                      file:rounded-full file:border-0
+                                                      file:text-xs file:font-semibold
+                                                      file:bg-gray-100 file:text-gray-700
+                                                      hover:file:bg-gray-200
+                                                      cursor-pointer border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 transition-colors">
+                                    </div>
                                 </div>
-                                ${index > 0 || isEditMode ? `
-                                <button type="button" onclick="this.parentElement.remove()" class="absolute top-2 right-2 text-gray-400 hover:text-red-500">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                </button>
-                                ` : ''}
                             `;
 
                             container.appendChild(row);
@@ -532,12 +555,13 @@ require_once __DIR__ . '/_back_button.php';
                 </div>
             </div>
 
-            <div class="mt-8 flex gap-4">
-                <button type="submit" class="bg-pink-600 text-white px-8 py-3 rounded-lg hover:bg-pink-700 font-bold">
+            <div class="mt-6 md:mt-8 flex flex-col sm:flex-row gap-4">
+                <button type="submit"
+                    class="w-full sm:w-auto bg-pink-600 text-white px-8 py-3 rounded-lg hover:bg-pink-700 font-bold">
                     <?php echo $action; ?> Product
                 </button>
                 <a href="<?php echo SITE_URL; ?>/admin/products"
-                    class="bg-gray-300 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-400 font-bold">
+                    class="w-full sm:w-auto text-center bg-gray-300 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-400 font-bold">
                     Cancel
                 </a>
             </div>

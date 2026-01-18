@@ -16,15 +16,16 @@
  * @param string $maxActions Maximum number of actions to show (default: 3)
  */
 
-function renderQuickActions($actions = [], $placement = 'top-right', $maxActions = 3) {
+function renderQuickActions($actions = [], $placement = 'top-right', $maxActions = 3)
+{
     if (empty($actions) || !is_array($actions)) {
         return;
     }
-    
+
     // Limit to maxActions
     $visibleActions = array_slice($actions, 0, $maxActions);
     $hiddenActions = array_slice($actions, $maxActions);
-    
+
     // Icon mapping (Heroicons outline style)
     $iconMap = [
         'plus' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>',
@@ -37,7 +38,7 @@ function renderQuickActions($actions = [], $placement = 'top-right', $maxActions
         'settings' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>',
         'refresh' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>',
     ];
-    
+
     // Button style classes based on type
     $buttonStyles = [
         'primary' => 'bg-pink-600 text-white hover:bg-pink-700 hover:shadow-lg focus:ring-2 focus:ring-pink-500 focus:ring-offset-2',
@@ -45,18 +46,18 @@ function renderQuickActions($actions = [], $placement = 'top-right', $maxActions
         'tertiary' => 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2',
         'danger' => 'bg-red-600 text-white hover:bg-red-700 hover:shadow-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2',
     ];
-    
+
     // Container classes based on placement
     $containerClasses = [
         'top-right' => 'flex justify-end items-center gap-3 flex-wrap',
         'below-title' => 'flex items-center gap-3 flex-wrap mt-4',
         'floating' => 'fixed bottom-4 right-4 z-50 flex flex-col gap-2',
     ];
-    
+
     $containerClass = $containerClasses[$placement] ?? $containerClasses['top-right'];
-    
+
     echo '<div class="quick-actions ' . $containerClass . '">';
-    
+
     foreach ($visibleActions as $action) {
         $type = $action['type'] ?? 'secondary';
         $icon = $action['icon'] ?? '';
@@ -65,30 +66,30 @@ function renderQuickActions($actions = [], $placement = 'top-right', $maxActions
         $tooltip = $action['tooltip'] ?? '';
         $confirm = $action['confirm'] ?? null;
         $ariaLabel = $action['aria-label'] ?? $label;
-        
+
         // Build full URL
         $fullUrl = (strpos($url, 'http') === 0 || strpos($url, '/') !== 0) ? $url : SITE_URL . $url;
-        
+
         // Get icon SVG
         $iconSvg = $iconMap[$icon] ?? '';
-        
+
         // Get button style
         $buttonClass = $buttonStyles[$type] ?? $buttonStyles['secondary'];
-        
+
         // Build attributes
         $attrs = [];
         $attrs[] = 'class="quick-action-btn ' . $buttonClass . ' inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 min-h-[44px] focus:outline-none"';
         $attrs[] = 'href="' . htmlspecialchars($fullUrl) . '"';
         $attrs[] = 'aria-label="' . htmlspecialchars($ariaLabel) . '"';
-        
+
         if ($tooltip) {
             $attrs[] = 'title="' . htmlspecialchars($tooltip) . '"';
         }
-        
+
         if ($confirm) {
             $attrs[] = 'onclick="return confirm(\'' . htmlspecialchars($confirm) . '\');"';
         }
-        
+
         echo '<a ' . implode(' ', $attrs) . '>';
         if ($iconSvg) {
             echo $iconSvg;
@@ -96,7 +97,7 @@ function renderQuickActions($actions = [], $placement = 'top-right', $maxActions
         echo '<span>' . htmlspecialchars($label) . '</span>';
         echo '</a>';
     }
-    
+
     // If there are hidden actions, show a dropdown (optional enhancement)
     if (!empty($hiddenActions) && $placement !== 'floating') {
         echo '<div class="relative quick-actions-dropdown">';
@@ -107,12 +108,13 @@ function renderQuickActions($actions = [], $placement = 'top-right', $maxActions
         // Dropdown menu would go here (can be enhanced with JavaScript)
         echo '</div>';
     }
-    
+
     echo '</div>';
 }
 
 // Add CSS styles for quick actions
-function getQuickActionsStyles() {
+function getQuickActionsStyles()
+{
     return '
     <style>
         .quick-action-btn {
@@ -132,9 +134,10 @@ function getQuickActionsStyles() {
         @media (max-width: 640px) {
             .quick-actions {
                 width: 100%;
+                flex-direction: column;
             }
             .quick-action-btn {
-                flex: 1;
+                width: 100%;
                 justify-content: center;
             }
         }
@@ -142,4 +145,3 @@ function getQuickActionsStyles() {
     ';
 }
 ?>
-

@@ -945,7 +945,7 @@
                     </button>
 
                     <!-- Page Title -->
-                    <h1 class="text-2xl font-bold text-gray-800">
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-800">
                         <?php echo isset($pageTitle) ? $pageTitle : 'Dashboard'; ?>
                     </h1>
 
