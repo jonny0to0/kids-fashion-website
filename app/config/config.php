@@ -6,7 +6,7 @@
 
 // Site Configuration
 define('SITE_NAME', 'Kids Bazaar');
-define('SITE_URL', 'http://ecom.dev.syntrex.io');
+define('SITE_URL', 'https://ecom.dev.syntrex.io');
 define('ADMIN_EMAIL', 'admin@kidsbazaar.com');
 
 // Environment
@@ -28,7 +28,7 @@ date_default_timezone_set('Asia/Kolkata');
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
     ini_set('session.use_only_cookies', 1);
-    ini_set('session.cookie_secure', 0); // Set to 1 in production with HTTPS
+    ini_set('session.cookie_secure', 1); // Secure cookies for HTTPS
 }
 
 // File Upload Settings
