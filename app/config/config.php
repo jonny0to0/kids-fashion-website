@@ -6,7 +6,7 @@
 
 // Site Configuration
 define('SITE_NAME', 'Kids Bazaar');
-define('SITE_URL', 'http://localhost/kid-bazar-ecom/public');
+define('SITE_URL', 'http://ecom.dev.syntrex.io');
 define('ADMIN_EMAIL', 'admin@kidsbazaar.com');
 
 // Environment

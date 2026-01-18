@@ -10,8 +10,8 @@ class Database {
     
     private $host = 'localhost';
     private $dbname = 'kids_bazaar';
-    private $username = 'root';
-    private $password = '';
+    private $username = 'phpmyadmin';
+    private $password = 'Vynex@001';
     private $charset = 'utf8mb4';
     
     private function __construct() {

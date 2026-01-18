@@ -6,7 +6,7 @@ RewriteEngine On
 Options -Indexes
 
 # Set base directory
-RewriteBase /kid-bazar-ecom/public/
+RewriteBase /
 
 # Route all requests through index.php except existing files
 RewriteCond %{REQUEST_FILENAME} !-f

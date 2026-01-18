@@ -56,7 +56,12 @@ require_once APP_PATH . '/helpers/MaintenanceMode.php';
 // Simple routing system - prepare path early
 $request_uri = $_SERVER['REQUEST_URI'] ?? '';
 $script_name = $_SERVER['SCRIPT_NAME'];
-$path = str_replace(dirname($script_name), '', parse_url($request_uri, PHP_URL_PATH));
+$base_dir = dirname($script_name);
+$path = parse_url($request_uri, PHP_URL_PATH);
+// Only strip base directory if it's not just '/'
+if ($base_dir !== '/' && $base_dir !== '') {
+    $path = preg_replace('#^' . preg_quote($base_dir, '#') . '#', '', $path, 1);
+}
 $path = trim($path, '/');
 
 // Maintenance Mode Check (Early - Before Routing)
