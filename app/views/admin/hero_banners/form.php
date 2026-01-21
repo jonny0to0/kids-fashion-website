@@ -7,7 +7,7 @@ require_once __DIR__ . '/../_breadcrumb.php';
 require_once __DIR__ . '/../_back_button.php';
 ?>
 
-<div class="container mx-auto px-4 py-8 max-w-4xl">
+<div class="container mx-auto px-4 sm:px-4 py-4 md:py-8 max-w-4xl">
     <?php
     // Render breadcrumb
     renderBreadcrumb([
@@ -25,7 +25,7 @@ require_once __DIR__ . '/../_back_button.php';
         <?php renderBackButton('Hero Banners', '/admin/hero-banners', 'top-left'); ?>
     </div>
     
-    <form method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow-md p-6 space-y-6" id="banner-form">
+    <form method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow-md p-4 md:p-6 space-y-6" id="banner-form">
         <!-- Visibility Controls -->
         <div class="border-b border-gray-200 pb-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-4">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Visibility Controls</h2>

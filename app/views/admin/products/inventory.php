@@ -42,7 +42,7 @@
 </div>
 
 <!-- Products Table -->
-<div class="admin-card">
+<div class="admin-card p-2 md:p-6">
     <?php if (empty($products)): ?>
         <div class="text-center py-12">
             <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +54,7 @@
         </div>
     <?php else: ?>
         <!-- Desktop Table View -->
-        <div class="hidden md:block overflow-x-auto">
+        <div class="hidden lg:block overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-gray-200">
@@ -128,7 +128,7 @@
         </div>
 
         <!-- Mobile Card View -->
-        <div class="block md:hidden space-y-4">
+        <div class="block lg:hidden space-y-4">
             <?php foreach ($products as $product): ?>
                 <?php
                 $currentStock = $product['current_stock'] ?? 0;

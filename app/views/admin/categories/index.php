@@ -17,13 +17,13 @@ require_once __DIR__ . '/../_quick_actions.php';
     ]);
     ?>
     
-    <div class="flex justify-between items-start mb-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
         <div class="flex-1">
             <h1 class="text-3xl font-bold text-gray-800">Manage Categories</h1>
             <p class="text-gray-600 mt-2">Add, edit, delete, or activate/deactivate categories</p>
             <p class="text-xs text-gray-400 mt-1">Data fetched directly from database • Always up-to-date</p>
         </div>
-        <div class="ml-4">
+        <div class="w-full sm:w-auto sm:ml-4">
             <?php
             renderQuickActions([
                 [

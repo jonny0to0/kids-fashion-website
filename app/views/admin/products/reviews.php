@@ -54,7 +54,7 @@
             <p class="text-gray-500 text-lg">No reviews found</p>
         </div>
     <?php else: ?>
-        <div class="overflow-x-auto">
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-gray-200">
@@ -108,8 +108,8 @@
                             </td>
                             <td class="py-3 px-4">
                                 <div class="max-w-md text-sm text-gray-700">
-                                    <?php echo htmlspecialchars(substr($review['comment'] ?? '', 0, 100)); ?>
-                                    <?php if (strlen($review['comment'] ?? '') > 100): ?>...<?php endif; ?>
+                                    <?php echo htmlspecialchars(substr($review['review_text'] ?? '', 0, 100)); ?>
+                                    <?php if (strlen($review['review_text'] ?? '') > 100): ?>...<?php endif; ?>
                                 </div>
                             </td>
                             <td class="py-3 px-4 text-center">
@@ -150,6 +150,90 @@
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="md:hidden space-y-4">
+            <?php foreach ($reviews as $review): ?>
+                <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <!-- Header: Product & Date -->
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <?php if (!empty($review['product_image'])): ?>
+                                <img src="<?php echo SITE_URL . '/' . $review['product_image']; ?>"
+                                    alt="<?php echo htmlspecialchars($review['product_name']); ?>"
+                                    class="w-12 h-12 object-cover rounded">
+                            <?php endif; ?>
+                            <div>
+                                <div class="font-medium text-gray-800 text-sm line-clamp-1">
+                                    <?php echo htmlspecialchars($review['product_name']); ?>
+                                </div>
+                                <div class="text-xs text-gray-500"><?php echo htmlspecialchars($review['sku'] ?? ''); ?></div>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-500 whitespace-nowrap ml-2">
+                            <?php echo date('M d, Y', strtotime($review['created_at'] ?? 'now')); ?>
+                        </span>
+                    </div>
+
+                    <!-- Rating & Status -->
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex">
+                            <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <svg class="w-4 h-4 <?php echo $i <= ($review['rating'] ?? 0) ? 'text-yellow-400' : 'text-gray-300'; ?>"
+                                    fill="currentColor" viewBox="0 0 20 20">
+                                    <path
+                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z">
+                                    </path>
+                                </svg>
+                            <?php endfor; ?>
+                        </div>
+                        <?php
+                        $status = strtoupper($review['status'] ?? ($review['is_approved'] ? 'APPROVED' : 'PENDING'));
+                        $badgeClass = match ($status) {
+                            'APPROVED' => 'bg-green-100 text-green-800',
+                            'PENDING' => 'bg-yellow-100 text-yellow-800',
+                            'REJECTED' => 'bg-red-100 text-red-800',
+                            'HIDDEN' => 'bg-gray-100 text-gray-800',
+                            default => 'bg-gray-100 text-gray-800'
+                        };
+                        ?>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full <?php echo $badgeClass; ?>">
+                            <?php echo ucfirst(strtolower($status)); ?>
+                        </span>
+                    </div>
+
+                    <!-- Customer Info -->
+                    <div class="mb-3 text-sm">
+                        <span class="text-gray-500">By:</span>
+                        <span class="font-medium text-gray-800">
+                            <?php echo htmlspecialchars($review['customer_name'] ?? 'N/A'); ?>
+                        </span>
+                    </div>
+
+                    <!-- Review Text -->
+                    <div class="text-sm text-gray-700 mb-4 bg-gray-50 p-3 rounded truncate">
+                        <?php echo htmlspecialchars($review['review_text'] ?? ''); ?>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                        <a href="<?php echo SITE_URL; ?>/products/detail/<?php echo $review['product_id']; ?>" target="_blank"
+                            class="text-gray-500 hover:text-gray-700 text-sm flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                </path>
+                            </svg>
+                            Product
+                        </a>
+                        <a href="<?php echo SITE_URL; ?>/admin/products/reviews-view/<?php echo $review['review_id']; ?>"
+                            class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
 
         <?php if (isset($pagination)): ?>

@@ -325,19 +325,19 @@ foreach ($revenueTrend as $item) {
     </div>
 
     <!-- Revenue Trend Section -->
-    <div class="admin-card mb-6">
-        <div class="flex items-center justify-between mb-4">
+    <div class="mb-6 md:bg-white md:rounded-lg md:shadow md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
             <div>
                 <h2 class="text-lg font-semibold text-gray-800">Revenue Trend</h2>
                 <p class="text-sm text-gray-600 mt-1">All Delivered Orders (Global Revenue)</p>
                 <p class="text-3xl font-bold text-gray-900 mt-2">
                     $<?php echo number_format($analytics['total_revenue'], 2); ?></p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 w-full sm:w-auto">
                 <input type="date" id="revenue-date-filter"
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                     value="<?php echo isset($_GET['revenue_date_from']) ? htmlspecialchars($_GET['revenue_date_from']) : date('Y-m-d', strtotime('-30 days')); ?>">
-                <button type="button" onclick="applyRevenueFilter()" class="p-2 text-gray-600 hover:text-gray-900"
+                <button type="button" onclick="applyRevenueFilter()" class="p-2 text-gray-600 hover:text-gray-900 flex-shrink-0"
                     title="Apply date filter to revenue chart">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -395,16 +395,15 @@ foreach ($revenueTrend as $item) {
                 <!-- Date Range Selector -->
                 <div class="lg:col-span-2 xl:col-span-1">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-                    <div class="flex items-center gap-2 min-w-0 w-full">
+                    <div class="flex flex-col sm:flex-row items-center gap-2 min-w-0 w-full">
                         <input type="date" name="date_from"
                             value="<?php echo htmlspecialchars($filters['date_from'] ?? ''); ?>"
-                            class="flex-1 min-w-0 px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                            style="max-width: calc(50% - 8px);">
-                        <span class="text-gray-500 flex-shrink-0 px-1">–</span>
+                            class="date-picker w-full sm:flex-1 min-w-0 px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                        <span class="text-gray-500 px-1 hidden sm:inline">–</span>
+                        <span class="text-gray-500 px-1 sm:hidden">to</span>
                         <input type="date" name="date_to"
                             value="<?php echo htmlspecialchars($filters['date_to'] ?? ''); ?>"
-                            class="flex-1 min-w-0 px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                            style="max-width: calc(50% - 8px);">
+                            class="date-picker w-full sm:flex-1 min-w-0 px-2 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
                     </div>
                 </div>
             </div>
@@ -572,7 +571,7 @@ foreach ($revenueTrend as $item) {
     (function () {
         'use strict';
 
-        let chartInstance = null;
+        window.revenueChart = null;
         let retryCount = 0;
         const maxRetries = 100;
 
@@ -601,8 +600,8 @@ foreach ($revenueTrend as $item) {
                 }
 
                 // Destroy existing chart if it exists
-                if (chartInstance) {
-                    chartInstance.destroy();
+                if (window.revenueChart) {
+                    window.revenueChart.destroy();
                 }
 
                 const revenueData = <?php echo json_encode($revenueChartData); ?>;
@@ -611,7 +610,7 @@ foreach ($revenueTrend as $item) {
                 // Use Chart.Chart if Chart.js v4, otherwise use Chart
                 const ChartConstructor = typeof Chart.Chart !== 'undefined' ? Chart.Chart : Chart;
 
-                chartInstance = new ChartConstructor(ctx, {
+                window.revenueChart = new ChartConstructor(ctx, {
                     type: 'line',
                     data: {
                         labels: revenueLabels,
@@ -689,19 +688,107 @@ foreach ($revenueTrend as $item) {
         }
     })();
 
-    // Revenue filter function
-    // IMPORTANT: Revenue chart uses separate parameters (revenue_date_from)
-    // This ensures the chart is independent of table filters and Quick Insights cards
+
+    // Flatpickr initialization removed to allow native browser date pickers (Option 1)
+
+    // IMPROVEMENT: Open native date picker when clicking anywhere in the input
+    (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInputs = document.querySelectorAll('input[type="date"]');
+            dateInputs.forEach(function(input) {
+                input.addEventListener('click', function(e) {
+                    // Prevent default only if necessary, but usually showPicker() works fine on its own
+                    // check if showPicker is supported
+                    if ('showPicker' in HTMLInputElement.prototype) {
+                        try {
+                            input.showPicker();
+                        } catch (err) {
+                            // Ignore errors (e.g. if already open or similar)
+                            console.log('Error opening picker:', err);
+                        }
+                    }
+                });
+            });
+        });
+    })();
+
+    // Scroll to Orders Table if filters are applied
+    (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            // Check if any filter parameters are present
+            if (urlParams.has('search') || urlParams.has('order_status') || urlParams.has('payment_status') || urlParams.has('date_from') || urlParams.has('date_to')) {
+                // Find the orders table container
+                const tableContainer = document.querySelector('.bg-white.rounded-lg.shadow-md.overflow-hidden');
+                
+                // Or finding the filter section if we want to show the filters too, 
+                // but requirement says "Page should scroll directly to the Orders table section"
+                // So let's target the table container which is right after the filter section
+                
+                // Alternatively, we can find the table header which has a sticky class
+                const tableHeader = document.querySelector('.table-header-sticky');
+                
+                if (tableHeader) {
+                   // Scroll with a bit of offset for the sticky header
+                   const yOffset = -100; // Account for any fixed headers
+                   const element = tableHeader.closest('.bg-white'); // Get the card containing the table
+                   
+                   if (element) {
+                        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                        window.scrollTo({top: y, behavior: 'smooth'});
+                   }
+                }
+            }
+        });
+    })();
+
+    // Revenue filter function (AJAX)
+    // Uses the new ordersRevenueData endpoint to update chart without page reload
     function applyRevenueFilter() {
         const dateFrom = document.getElementById('revenue-date-filter').value;
+        const btn = document.querySelector('button[onclick="applyRevenueFilter()"]');
+        const originalContent = btn.innerHTML;
+        
+        // Show loading state
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="animate-spin h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
+        // Build URL
+        const url = new URL('<?php echo SITE_URL; ?>/admin/orders/revenue-data', window.location.origin);
         if (dateFrom) {
-            const url = new URL(window.location.href);
-            // Use revenue-specific parameter, not table filter parameter
             url.searchParams.set('revenue_date_from', dateFrom);
-            // Remove table date filters to keep chart independent
-            url.searchParams.delete('date_from');
-            window.location.href = url.toString();
         }
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (window.revenueChart && data.labels && data.data) {
+                window.revenueChart.data.labels = data.labels;
+                window.revenueChart.data.datasets[0].data = data.data;
+                window.revenueChart.update();
+                
+                // Update total text if returned
+                if (data.total_revenue !== undefined) {
+                    const totalEl = document.querySelector('.admin-card h2 + p + p');
+                    if (totalEl) {
+                        totalEl.innerText = '$' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(data.total_revenue);
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching revenue data:', error);
+            // Optional: show error toast
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        });
     }
 
     // Quick Insights Active State Management

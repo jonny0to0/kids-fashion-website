@@ -131,3 +131,22 @@ try {
     </div>
 </div>
 
+<!-- SweetAlert for Deactivation Error -->
+<?php if (!empty($errors)): ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php foreach ($errors as $error): ?>
+            <?php if (strpos($error, 'deactivated') !== false): ?>
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Account Deactivated',
+                    text: '<?php echo $error; ?>',
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'Contact Support'
+                });
+            <?php endif; ?>
+        <?php endforeach; ?>
+    });
+</script>
+<?php endif; ?>
+

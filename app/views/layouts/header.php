@@ -1,3 +1,8 @@
+<?php
+// Ensure user is active (kick out deactivated users)
+// This MUST be before any HTML output to avoid "headers already sent" errors during redirect
+$userStatusCheck = Session::ensureUserActive();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -551,6 +556,24 @@
     <!-- Set SITE_URL for JavaScript -->
     <script>
         window.SITE_URL = '<?php echo SITE_URL; ?>';
+        
+        <?php if ($userStatusCheck === 'deactivated'): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                icon: 'error',
+                title: 'Account Deactivated',
+                text: 'Your account has been deactivated. Please contact support for further assistance.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#ef4444'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '<?php echo SITE_URL; ?>/user/logout';
+                }
+            });
+        });
+        <?php endif; ?>
     </script>
 </head>
 <body class="bg-gray-50">
@@ -583,6 +606,35 @@
                     echo $logoHtml;
                     ?>
                 </div>
+
+                <!-- Suspended User Warning Banner -->
+                <?php if (Session::isLoggedIn() && Session::get('user_status') === USER_STATUS_SUSPENDED): 
+                    $suspensionCode = Session::get('suspension_code');
+                    $reasonMap = [
+                        'FRAUD_ORDER' => 'Suspicious order activity detected.',
+                        'PAYMENT_ABUSE' => 'Payment verification required.',
+                        'REVIEW_SPAM' => 'Review policy violation.',
+                        'POLICY_VIOLATION' => 'Terms of Service violation.',
+                        'MULTIPLE_ACCOUNTS' => 'Multiple account usage detected.',
+                        'ABUSE_SUPPORT' => 'Support communication policy violation.',
+                        'AUTO_RISK' => 'Security risk detected.',
+                        'OTHER' => 'Account under review.'
+                    ];
+                    $displayReason = $reasonMap[$suspensionCode] ?? 'Account under review.';
+                ?>
+                <div class="fixed top-20 left-1/2 transform -translate-x-1/2 z-[60] w-full max-w-2xl px-4">
+                    <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 shadow-lg rounded-r" role="alert">
+                        <div class="flex">
+                            <div class="py-1"><svg class="fill-current h-6 w-6 text-red-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z"/></svg></div>
+                            <div>
+                                <p class="font-bold">Account Suspended</p>
+                                <p class="text-sm"><?php echo htmlspecialchars($displayReason); ?></p>
+                                <p class="text-xs mt-1">Please contact support@example.com for assistance.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
                 
                 <!-- Search Bar - Hidden on mobile, shown on md+ -->
                 <div class="hidden md:flex flex-1 max-w-lg mx-4 lg:mx-8">
@@ -640,6 +692,7 @@
                                 <a href="<?php echo SITE_URL; ?>/user/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
                                 <a href="<?php echo SITE_URL; ?>/order" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Orders</a>
                                 <a href="<?php echo SITE_URL; ?>/user/wishlist" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Wishlist</a>
+                                <a href="<?php echo SITE_URL; ?>/support" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Help / Support</a>
                                 <div class="border-t border-gray-200 my-1"></div>
                                 <a href="<?php echo SITE_URL; ?>/user/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
                             </div>

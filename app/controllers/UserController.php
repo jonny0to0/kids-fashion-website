@@ -71,8 +71,17 @@ class UserController
             $user = $this->userModel->authenticate($email, $password);
 
             if ($user) {
+                // Check if suspended and get reason
+                if ($user['status'] === USER_STATUS_SUSPENDED) {
+                    $history = $this->userModel->getStatusHistory($user['user_id']);
+                    if (!empty($history)) {
+                        Session::set('suspension_code', $history[0]['reason_code']);
+                    }
+                }
+
                 Session::set('user_id', $user['user_id']);
                 Session::set('user_type', $user['user_type']);
+                Session::set('user_status', $user['status']); // Added status
                 Session::set('user_name', $user['first_name'] . ' ' . $user['last_name']);
                 Session::set('user_email', $user['email']);
 
@@ -120,7 +129,19 @@ class UserController
                 header('Location: ' . $redirect);
                 exit;
             } else {
-                $errors[] = 'Invalid email or password';
+                // Login failed. Check if it's due to status
+                $userByEmail = $this->userModel->findByEmail($email);
+                if ($userByEmail && password_verify($password, $userByEmail['password'])) {
+                    // Credentials are correct, check status
+                    if ($userByEmail['status'] === USER_STATUS_DEACTIVATED || $userByEmail['status'] === USER_STATUS_DELETED) {
+                        $errors[] = 'Your account has been deactivated. Please contact support.';
+                    } else {
+                        // This case handles wrong status that isn't deactivated/deleted but also not allowed by authenticate (e.g. some future status)
+                        $errors[] = 'Invalid email or password';
+                    }
+                } else {
+                    $errors[] = 'Invalid email or password';
+                }
             }
         }
 

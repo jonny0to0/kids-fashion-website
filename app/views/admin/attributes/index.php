@@ -17,12 +17,12 @@ require_once __DIR__ . '/../_quick_actions.php';
     ]);
     ?>
     
-    <div class="flex justify-between items-start mb-8">
-        <div class="flex-1">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div class="flex-1 w-full md:w-auto">
             <h1 class="text-3xl font-bold text-gray-800">Manage Category Attributes</h1>
             <p class="text-gray-600 mt-2">Define attributes for each category (e.g., Size, Color, Material)</p>
         </div>
-        <div class="ml-4">
+        <div class="w-full md:w-auto">
             <?php
             renderQuickActions([
                 [

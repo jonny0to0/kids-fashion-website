@@ -10,17 +10,17 @@
 </div>
 
 <div class="admin-card mb-6">
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-semibold text-gray-800">Sales Analytics</h2>
-        <form method="GET" action="<?php echo SITE_URL; ?>/admin/reports" class="flex items-center gap-3">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h2 class="text-xl sm:text-2xl font-semibold text-gray-800">Sales Analytics</h2>
+        <form method="GET" action="<?php echo SITE_URL; ?>/admin/reports" class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
             <input type="hidden" name="type" value="sales">
-            <select name="days" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+            <select name="days" class="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
                 <option value="7" <?php echo ($days ?? 30) == 7 ? 'selected' : ''; ?>>Last 7 Days</option>
                 <option value="30" <?php echo ($days ?? 30) == 30 ? 'selected' : ''; ?>>Last 30 Days</option>
                 <option value="90" <?php echo ($days ?? 30) == 90 ? 'selected' : ''; ?>>Last 90 Days</option>
                 <option value="365" <?php echo ($days ?? 30) == 365 ? 'selected' : ''; ?>>Last Year</option>
             </select>
-            <button type="submit" class="btn-pink-gradient px-6 py-2 rounded-lg font-medium">Apply</button>
+            <button type="submit" class="w-full sm:w-auto btn-pink-gradient px-6 py-2 rounded-lg font-medium">Apply</button>
         </form>
     </div>
     

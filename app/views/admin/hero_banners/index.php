@@ -8,7 +8,7 @@ require_once __DIR__ . '/../_quick_actions.php';
 
 <?php echo getQuickActionsStyles(); ?>
 
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 sm:px-4 py-4 md:py-8">
     <?php
     // Render breadcrumb
     renderBreadcrumb([
@@ -17,12 +17,12 @@ require_once __DIR__ . '/../_quick_actions.php';
     ]);
     ?>
 
-    <div class="flex justify-between items-start mb-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4 md:gap-0">
         <div class="flex-1">
-            <h1 class="text-3xl font-bold text-gray-800">Manage Hero Banners</h1>
-            <p class="text-gray-600 mt-2">Control homepage and category hero banners</p>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Manage Hero Banners</h1>
+            <p class="text-gray-600 mt-2 text-sm md:text-base">Control homepage and category hero banners</p>
         </div>
-        <div class="ml-4">
+        <div class="w-full md:w-auto ml-0 md:ml-4">
             <?php
             renderQuickActions([
                 [
@@ -42,7 +42,7 @@ require_once __DIR__ . '/../_quick_actions.php';
     <div class="bg-white rounded-lg shadow-md p-4 mb-6">
         <form method="GET" action="<?php echo SITE_URL; ?>/admin/hero-banners" class="flex gap-4 flex-wrap">
             <select name="status"
-                class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                class="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
                 <option value="">All Status</option>
                 <option value="active" <?php echo ($filters['status'] ?? '') === 'active' ? 'selected' : ''; ?>>Active
                 </option>
@@ -50,7 +50,7 @@ require_once __DIR__ . '/../_quick_actions.php';
                     Inactive</option>
             </select>
             <select name="target_type"
-                class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                class="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
                 <option value="">All Types</option>
                 <option value="homepage" <?php echo ($filters['target_type'] ?? '') === 'homepage' ? 'selected' : ''; ?>>
                     Homepage</option>
@@ -59,7 +59,7 @@ require_once __DIR__ . '/../_quick_actions.php';
                 <option value="campaign" <?php echo ($filters['target_type'] ?? '') === 'campaign' ? 'selected' : ''; ?>>
                     Campaign</option>
             </select>
-            <button type="submit" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700">
+            <button type="submit" class="w-full md:w-auto bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700">
                 Filter
             </button>
             <?php if (!empty($filters)): ?>
@@ -89,7 +89,7 @@ require_once __DIR__ . '/../_quick_actions.php';
         <?php else: ?>
             <div id="banners-list" class="divide-y divide-gray-200">
                 <?php foreach ($banners as $banner): ?>
-                    <div class="banner-item px-6 py-4 hover:bg-gray-50 transition-colors"
+                    <div class="banner-item p-4 md:px-6 md:py-4 hover:bg-gray-50 transition-colors"
                         data-banner-id="<?php echo $banner['banner_id']; ?>" draggable="true">
                         <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
                             <!-- Drag Handle -->
@@ -101,8 +101,8 @@ require_once __DIR__ . '/../_quick_actions.php';
                             </div>
 
                             <!-- Banner Preview -->
-                            <div class="flex-shrink-0">
-                                <div class="relative w-32 h-20 bg-gray-100 rounded-lg overflow-hidden">
+                            <div class="w-full md:w-auto flex-shrink-0">
+                                <div class="relative w-full h-48 md:w-48 md:h-28 bg-gray-100 rounded-lg overflow-hidden">
                                     <img src="<?php echo SITE_URL . $banner['desktop_image']; ?>"
                                         alt="<?php echo htmlspecialchars($banner['title']); ?>"
                                         class="w-full h-full object-cover">
@@ -169,7 +169,7 @@ require_once __DIR__ . '/../_quick_actions.php';
                             </div>
 
                             <!-- Actions -->
-                            <div class="flex-shrink-0 flex items-center gap-2">
+                            <div class="flex-shrink-0 flex items-center justify-end w-full md:w-auto gap-2 mt-2 md:mt-0">
                                 <a href="<?php echo SITE_URL; ?>/admin/hero-banner/edit/<?php echo $banner['banner_id']; ?>"
                                     class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,30 +178,30 @@ require_once __DIR__ . '/../_quick_actions.php';
                                         </path>
                                     </svg>
                                 </a>
-                                <a href="<?php echo SITE_URL; ?>/admin/hero-banner/toggle-status/<?php echo $banner['banner_id']; ?>"
-                                    class="p-2 <?php echo $banner['status'] === 'active' ? 'text-orange-600 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'; ?> rounded-lg transition-colors"
-                                    title="<?php echo $banner['status'] === 'active' ? 'Deactivate' : 'Activate'; ?>"
-                                    onclick="return confirm('Are you sure you want to <?php echo $banner['status'] === 'active' ? 'deactivate' : 'activate'; ?> this banner?');">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <?php if ($banner['status'] === 'active'): ?>
+                                    <a href="<?php echo SITE_URL; ?>/admin/hero-banner/toggle-status/<?php echo $banner['banner_id']; ?>"
+                                        class="p-2 <?php echo $banner['status'] === 'active' ? 'text-orange-600 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'; ?> rounded-lg transition-colors"
+                                        title="<?php echo $banner['status'] === 'active' ? 'Deactivate' : 'Activate'; ?>"
+                                        onclick="return confirm('Are you sure you want to <?php echo $banner['status'] === 'active' ? 'deactivate' : 'activate'; ?> this banner?');">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <?php if ($banner['status'] === 'active'): ?>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                                                </path>
+                                            <?php else: ?>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            <?php endif; ?>
+                                        </svg>
+                                    </a>
+                                    <a href="<?php echo SITE_URL; ?>/admin/hero-banner/delete/<?php echo $banner['banner_id']; ?>"
+                                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete"
+                                        onclick="return confirm('Are you sure you want to delete this banner? This action cannot be undone.');">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
                                             </path>
-                                        <?php else: ?>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        <?php endif; ?>
-                                    </svg>
-                                </a>
-                                <a href="<?php echo SITE_URL; ?>/admin/hero-banner/delete/<?php echo $banner['banner_id']; ?>"
-                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete"
-                                    onclick="return confirm('Are you sure you want to delete this banner? This action cannot be undone.');">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                        </path>
-                                    </svg>
-                                </a>
+                                        </svg>
+                                    </a>
                             </div>
                         </div>
                     </div>

@@ -39,6 +39,15 @@ class CartController {
             echo json_encode(['success' => false, 'message' => 'Invalid request']);
             return;
         }
+
+        // Check if user is suspended
+        if (Session::isLoggedIn() && Session::get('user_status') === USER_STATUS_SUSPENDED) {
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Your account is suspended. You cannot add items to cart.'
+            ]);
+            return;
+        }
         
         $productId = (int)($_POST['product_id'] ?? 0);
         $variantId = isset($_POST['variant_id']) && $_POST['variant_id'] ? (int)$_POST['variant_id'] : null;

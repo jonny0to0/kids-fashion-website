@@ -23,6 +23,7 @@
                 <div>
                     <h4 class="font-bold mb-4">Customer Service</h4>
                     <ul class="space-y-2">
+                        <li><a href="<?php echo SITE_URL; ?>/support" class="text-gray-400 hover:text-white">Help & Support</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white">FAQs</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white">Returns & Refunds</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white">Shipping Policy</a></li>

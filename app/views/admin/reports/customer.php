@@ -11,6 +11,7 @@ $customerGrowth = $customerGrowth ?? [];
 $customerSegmentation = $customerSegmentation ?? [];
 $customerValueMetrics = $customerValueMetrics ?? [];
 $retentionMetrics = $retentionMetrics ?? ['one_time_buyers' => 0, 'repeat_buyers' => 0, 'total_customers' => 0];
+$retentionTrend = $retentionTrend ?? [];
 $retentionRate = $retentionRate ?? 0;
 $avgAOV = $avgAOV ?? 0;
 $avgCLV = $avgCLV ?? 0;
@@ -23,13 +24,24 @@ $filters = $filters ?? [];
 $days = $days ?? 30;
 ?>
 
+<?php
+require_once dirname(__DIR__) . '/_breadcrumb.php';
+
+renderBreadcrumb([
+    ['label' => 'Home', 'url' => '/admin'],
+    ['label' => 'Reports', 'url' => '/admin/reports'],
+    ['label' => 'Customer Reports']
+]);
+?>
+
 <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">Customer Reports</h1>
-    <p class="text-gray-600 mt-1">Analyze customer behavior, value, and retention patterns</p>
+    <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Customer Reports</h1>
+    <p class="text-sm sm:text-base text-gray-600 mt-1">Analyze customer behavior, value, and retention patterns</p>
 </div>
 
 <!-- Filter Bar -->
-<div class="admin-card mb-6">
+<!-- Filter Bar -->
+<div class="admin-card mb-6 p-4 sm:p-6">
     <form method="GET" action="<?php echo SITE_URL; ?>/admin/reports" id="customerReportFilters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <input type="hidden" name="type" value="customer">
         
@@ -81,12 +93,14 @@ $days = $days ?? 30;
         <!-- Search -->
         <div class="lg:col-span-5">
             <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <div class="flex gap-2">
+            <div class="flex flex-col sm:flex-row gap-3">
                 <input type="text" name="search" value="<?php echo htmlspecialchars($filters['search'] ?? ''); ?>" 
                        placeholder="Search by name, email, or phone..." 
-                       class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
-                <button type="submit" class="btn-pink-gradient px-6 py-2 rounded-lg font-medium">Apply Filters</button>
-                <a href="<?php echo SITE_URL; ?>/admin/reports?type=customer" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-50">Reset</a>
+                       class="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 sm:flex-none btn-pink-gradient px-6 py-2 rounded-lg font-medium whitespace-nowrap">Apply Filters</button>
+                    <a href="<?php echo SITE_URL; ?>/admin/reports?type=customer" class="flex-1 sm:flex-none bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-50 text-center">Reset</a>
+                </div>
             </div>
         </div>
     </form>
@@ -174,24 +188,33 @@ $days = $days ?? 30;
 <!-- Report Sections -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <!-- Customer Growth Report -->
-    <div class="admin-card">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-800">Customer Growth</h2>
-            <button onclick="exportChart('growthChart')" class="text-sm text-pink-600 hover:text-pink-700">Export</button>
+    <!-- Customer Growth Trend -->
+    <div class="admin-card mb-6 p-2 sm:p-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
+            <div>
+                <h2 class="text-lg font-bold text-gray-800">Customer Growth Trend</h2>
+                <p class="text-xs sm:text-sm text-gray-500 mt-1">New customer acquisition over time</p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <button onclick="exportChart('growthChart')" class="text-xs font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 px-3 py-1.5 rounded-full transition-colors">Export Chart</button>
+            </div>
         </div>
         <?php if (!empty($customerGrowth)): ?>
-            <div style="position: relative; height: 300px;">
+            <div class="relative w-full h-64 sm:h-[350px]">
                 <canvas id="growthChart"></canvas>
             </div>
         <?php else: ?>
-            <div class="text-center py-12">
-                <p class="text-gray-500">No customer growth data available for the selected period.</p>
+            <div class="flex flex-col items-center justify-center h-64 text-gray-400">
+                <svg class="w-12 h-12 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+                <p class="text-sm font-medium">No customer growth data available for the selected period.</p>
             </div>
         <?php endif; ?>
     </div>
     
     <!-- Customer Segmentation Report -->
-    <div class="admin-card">
+    <div class="admin-card mb-6 p-4 sm:p-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-gray-800">Customer Segmentation</h2>
             <button onclick="exportChart('segmentationChart')" class="text-sm text-pink-600 hover:text-pink-700">Export</button>
@@ -200,7 +223,7 @@ $days = $days ?? 30;
             <div style="position: relative; height: 300px;">
                 <canvas id="segmentationChart"></canvas>
             </div>
-            <div class="mt-4">
+            <div class="mt-4 overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50">
                         <tr>
@@ -233,46 +256,46 @@ $days = $days ?? 30;
 </div>
 
 <!-- Customer Value Report -->
-<div class="admin-card mb-6">
+<div class="admin-card mb-6 p-4 sm:p-6">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-gray-800">Customer Value Metrics</h2>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div class="text-center p-4 bg-blue-50 rounded-lg">
             <p class="text-sm text-gray-600 mb-1">Average Order Value (AOV)</p>
-            <p class="text-2xl font-bold text-blue-600">$<?php echo number_format($avgAOV, 2); ?></p>
+            <p class="text-2xl font-bold text-blue-600">₹<?php echo number_format($avgAOV, 2); ?></p>
         </div>
         <div class="text-center p-4 bg-green-50 rounded-lg">
             <p class="text-sm text-gray-600 mb-1">Customer Lifetime Value (CLV)</p>
-            <p class="text-2xl font-bold text-green-600">$<?php echo number_format($avgCLV, 2); ?></p>
+            <p class="text-2xl font-bold text-green-600">₹<?php echo number_format($avgCLV, 2); ?></p>
         </div>
         <div class="text-center p-4 bg-purple-50 rounded-lg">
             <p class="text-sm text-gray-600 mb-1">Total Revenue</p>
-            <p class="text-2xl font-bold text-purple-600">$<?php echo number_format(!empty($customerValueMetrics) ? array_sum(array_column($customerValueMetrics, 'total_spent')) : 0, 2); ?></p>
+            <p class="text-2xl font-bold text-purple-600">₹<?php echo number_format(!empty($customerValueMetrics) ? array_sum(array_column($customerValueMetrics, 'total_spent')) : 0, 2); ?></p>
         </div>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-4 py-2 text-left text-gray-700">Customer</th>
-                    <th class="px-4 py-2 text-left text-gray-700">Email</th>
-                    <th class="px-4 py-2 text-center text-gray-700">Orders</th>
-                    <th class="px-4 py-2 text-right text-gray-700">Total Spent</th>
-                    <th class="px-4 py-2 text-right text-gray-700">AOV</th>
-                    <th class="px-4 py-2 text-right text-gray-700">CLV</th>
+                    <th class="px-4 py-2 text-left text-gray-700 whitespace-nowrap">Customer</th>
+                    <th class="px-4 py-2 text-left text-gray-700 whitespace-nowrap">Email</th>
+                    <th class="px-4 py-2 text-center text-gray-700 whitespace-nowrap">Orders</th>
+                    <th class="px-4 py-2 text-right text-gray-700 whitespace-nowrap">Total Spent</th>
+                    <th class="px-4 py-2 text-right text-gray-700 whitespace-nowrap">AOV</th>
+                    <th class="px-4 py-2 text-right text-gray-700 whitespace-nowrap">CLV</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (!empty($customerValueMetrics)): ?>
                     <?php foreach (array_slice($customerValueMetrics, 0, 10) as $customer): ?>
                     <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-2 font-medium"><?php echo htmlspecialchars($customer['customer_name']); ?></td>
-                        <td class="px-4 py-2 text-gray-600"><?php echo htmlspecialchars($customer['email']); ?></td>
-                        <td class="px-4 py-2 text-center"><?php echo number_format($customer['total_orders']); ?></td>
-                        <td class="px-4 py-2 text-right font-semibold text-green-600">$<?php echo number_format($customer['total_spent'], 2); ?></td>
-                        <td class="px-4 py-2 text-right">$<?php echo number_format($customer['avg_order_value'], 2); ?></td>
-                        <td class="px-4 py-2 text-right">$<?php echo number_format($customer['customer_lifetime_value'], 2); ?></td>
+                        <td class="px-4 py-2 font-medium whitespace-nowrap"><?php echo htmlspecialchars($customer['customer_name']); ?></td>
+                        <td class="px-4 py-2 text-gray-600 whitespace-nowrap"><?php echo htmlspecialchars($customer['email']); ?></td>
+                        <td class="px-4 py-2 text-center whitespace-nowrap"><?php echo number_format($customer['total_orders']); ?></td>
+                        <td class="px-4 py-2 text-right font-semibold text-green-600 whitespace-nowrap">₹<?php echo number_format($customer['total_spent'], 2); ?></td>
+                        <td class="px-4 py-2 text-right whitespace-nowrap">₹<?php echo number_format($customer['avg_order_value'], 2); ?></td>
+                        <td class="px-4 py-2 text-right whitespace-nowrap">₹<?php echo number_format($customer['customer_lifetime_value'], 2); ?></td>
                     </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
@@ -285,39 +308,49 @@ $days = $days ?? 30;
     </div>
 </div>
 
-    <!-- Repeat Purchase & Retention Report -->
-    <div class="admin-card mb-6">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-800">Repeat Purchase & Retention</h2>
-            <button onclick="exportChart('retentionChart')" class="text-sm text-pink-600 hover:text-pink-700">Export</button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div class="text-center p-4 bg-blue-50 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">One-Time Buyers</p>
-                <p class="text-2xl font-bold text-blue-600"><?php echo number_format($retentionMetrics['one_time_buyers'] ?? 0); ?></p>
+    <!-- Repeat Purchase & Retention Trends -->
+    <div class="admin-card mb-6 p-2 sm:p-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
+            <div>
+                <h2 class="text-lg font-bold text-gray-800">Retention & Repeat Purchase Trends</h2>
+                <p class="text-xs sm:text-sm text-gray-500 mt-1">Daily order breakdown: New vs. Returning customers</p>
             </div>
-            <div class="text-center p-4 bg-green-50 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">Repeat Buyers</p>
-                <p class="text-2xl font-bold text-green-600"><?php echo number_format($retentionMetrics['repeat_buyers'] ?? 0); ?></p>
-            </div>
-            <div class="text-center p-4 bg-purple-50 rounded-lg">
-                <p class="text-sm text-gray-600 mb-1">Retention Rate</p>
-                <p class="text-2xl font-bold text-purple-600"><?php echo number_format($retentionRate, 1); ?>%</p>
+            <div class="mt-4 sm:mt-0">
+                <button onclick="exportChart('retentionChart')" class="text-xs font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 px-3 py-1.5 rounded-full transition-colors">Export Chart</button>
             </div>
         </div>
-        <?php if (($retentionMetrics['one_time_buyers'] ?? 0) > 0 || ($retentionMetrics['repeat_buyers'] ?? 0) > 0): ?>
-            <div style="position: relative; height: 250px;">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="text-center p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Retention Rate</p>
+                <p class="text-3xl font-extrabold text-purple-600"><?php echo number_format($retentionRate, 1); ?>%</p>
+            </div>
+            <div class="text-center p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Repeat Buyers</p>
+                <p class="text-3xl font-extrabold text-blue-600"><?php echo number_format($retentionMetrics['repeat_buyers'] ?? 0); ?></p>
+            </div>
+            <div class="text-center p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">One-Time Buyers</p>
+                <p class="text-3xl font-extrabold text-gray-600"><?php echo number_format($retentionMetrics['one_time_buyers'] ?? 0); ?></p>
+            </div>
+        </div>
+
+        <div class="relative w-full h-64 sm:h-[350px]">
+            <?php if (!empty($retentionTrend)): ?>
                 <canvas id="retentionChart"></canvas>
-            </div>
-        <?php else: ?>
-            <div class="text-center py-8">
-                <p class="text-gray-500">No retention data available for the selected period.</p>
-            </div>
-        <?php endif; ?>
+            <?php else: ?>
+                <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                    <svg class="w-12 h-12 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <p class="text-sm font-medium">No trend data available for this period</p>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 
 <!-- Top Customers Report -->
-<div class="admin-card mb-6">
+<div class="admin-card mb-6 p-4 sm:p-6">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-gray-800">Top Customers</h2>
         <div class="flex gap-2">
@@ -328,28 +361,28 @@ $days = $days ?? 30;
         <table id="topCustomersTable" class="w-full text-sm">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-4 py-2 text-left text-gray-700">Rank</th>
-                    <th class="px-4 py-2 text-left text-gray-700">Customer</th>
-                    <th class="px-4 py-2 text-left text-gray-700">Email</th>
-                    <th class="px-4 py-2 text-center text-gray-700">Orders</th>
-                    <th class="px-4 py-2 text-right text-gray-700">Total Spent</th>
-                    <th class="px-4 py-2 text-right text-gray-700">AOV</th>
-                    <th class="px-4 py-2 text-left text-gray-700">Last Order</th>
-                    <th class="px-4 py-2 text-center text-gray-700">Actions</th>
+                    <th class="px-4 py-2 text-left text-gray-700 whitespace-nowrap">Rank</th>
+                    <th class="px-4 py-2 text-left text-gray-700 whitespace-nowrap">Customer</th>
+                    <th class="px-4 py-2 text-left text-gray-700 whitespace-nowrap">Email</th>
+                    <th class="px-4 py-2 text-center text-gray-700 whitespace-nowrap">Orders</th>
+                    <th class="px-4 py-2 text-right text-gray-700 whitespace-nowrap">Total Spent</th>
+                    <th class="px-4 py-2 text-right text-gray-700 whitespace-nowrap">AOV</th>
+                    <th class="px-4 py-2 text-left text-gray-700 whitespace-nowrap">Last Order</th>
+                    <th class="px-4 py-2 text-center text-gray-700 whitespace-nowrap">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (!empty($topCustomers)): ?>
                     <?php foreach ($topCustomers as $index => $customer): ?>
                     <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-2 font-semibold">#<?php echo $index + 1; ?></td>
-                        <td class="px-4 py-2 font-medium"><?php echo htmlspecialchars($customer['customer_name']); ?></td>
-                        <td class="px-4 py-2 text-gray-600"><?php echo htmlspecialchars($customer['email']); ?></td>
+                        <td class="px-4 py-2 font-semibold"><?php echo $index + 1; ?></td>
+                        <td class="px-4 py-2 font-medium whitespace-nowrap"><?php echo htmlspecialchars($customer['customer_name']); ?></td>
+                        <td class="px-4 py-2 text-gray-600 whitespace-nowrap"><?php echo htmlspecialchars($customer['email']); ?></td>
                         <td class="px-4 py-2 text-center"><?php echo number_format($customer['total_orders']); ?></td>
-                        <td class="px-4 py-2 text-right font-semibold text-green-600">$<?php echo number_format($customer['total_spent'], 2); ?></td>
-                        <td class="px-4 py-2 text-right">$<?php echo number_format($customer['avg_order_value'], 2); ?></td>
-                        <td class="px-4 py-2 text-gray-600"><?php echo $customer['last_order_date'] ? date('M d, Y', strtotime($customer['last_order_date'])) : 'N/A'; ?></td>
-                        <td class="px-4 py-2 text-center">
+                        <td class="px-4 py-2 text-right font-semibold text-green-600 whitespace-nowrap">₹<?php echo number_format($customer['total_spent'], 2); ?></td>
+                        <td class="px-4 py-2 text-right whitespace-nowrap">₹<?php echo number_format($customer['avg_order_value'], 2); ?></td>
+                        <td class="px-4 py-2 text-gray-600 whitespace-nowrap"><?php echo $customer['last_order_date'] ? date('M d, Y', strtotime($customer['last_order_date'])) : 'N/A'; ?></td>
+                        <td class="px-4 py-2 text-center whitespace-nowrap">
                             <a href="<?php echo SITE_URL; ?>/admin/customers?search=<?php echo urlencode($customer['email']); ?>" 
                                class="text-pink-600 hover:text-pink-700 text-sm">View</a>
                         </td>
@@ -366,7 +399,7 @@ $days = $days ?? 30;
 </div>
 
 <!-- Detailed Customer Table -->
-<div class="admin-card mb-6">
+<div class="admin-card mb-6 p-4 sm:p-6">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-gray-800">All Customers</h2>
         <div class="flex gap-2">
@@ -379,42 +412,42 @@ $days = $days ?? 30;
             <table id="customersTable" class="w-full text-sm">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-2 text-left text-gray-700 cursor-pointer" onclick="sortTable('customer_name')">
+                        <th class="px-4 py-2 text-left text-gray-700 cursor-pointer whitespace-nowrap" onclick="sortTable('customer_name')">
                             Customer <span class="sort-indicator">↕</span>
                         </th>
-                        <th class="px-4 py-2 text-left text-gray-700">Email / Phone</th>
-                        <th class="px-4 py-2 text-center text-gray-700 cursor-pointer" onclick="sortTable('total_orders')">
+                        <th class="px-4 py-2 text-left text-gray-700 whitespace-nowrap">Email / Phone</th>
+                        <th class="px-4 py-2 text-center text-gray-700 cursor-pointer whitespace-nowrap" onclick="sortTable('total_orders')">
                             Orders <span class="sort-indicator">↕</span>
                         </th>
-                        <th class="px-4 py-2 text-right text-gray-700 cursor-pointer" onclick="sortTable('total_spent')">
+                        <th class="px-4 py-2 text-right text-gray-700 cursor-pointer whitespace-nowrap" onclick="sortTable('total_spent')">
                             Total Spent <span class="sort-indicator">↕</span>
                         </th>
-                        <th class="px-4 py-2 text-left text-gray-700">Last Order</th>
-                        <th class="px-4 py-2 text-center text-gray-700">Status</th>
-                        <th class="px-4 py-2 text-center text-gray-700">Actions</th>
+                        <th class="px-4 py-2 text-left text-gray-700 whitespace-nowrap">Last Order</th>
+                        <th class="px-4 py-2 text-center text-gray-700 whitespace-nowrap">Status</th>
+                        <th class="px-4 py-2 text-center text-gray-700 whitespace-nowrap">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($customersList as $customer): ?>
                     <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-2 font-medium"><?php echo htmlspecialchars($customer['customer_name']); ?></td>
-                        <td class="px-4 py-2">
+                        <td class="px-4 py-2 font-medium whitespace-nowrap"><?php echo htmlspecialchars($customer['customer_name']); ?></td>
+                        <td class="px-4 py-2 whitespace-nowrap">
                             <div class="text-gray-600"><?php echo htmlspecialchars($customer['email']); ?></div>
                             <?php if (!empty($customer['phone'])): ?>
                                 <div class="text-xs text-gray-500"><?php echo htmlspecialchars($customer['phone']); ?></div>
                             <?php endif; ?>
                         </td>
                         <td class="px-4 py-2 text-center font-semibold"><?php echo number_format($customer['total_orders']); ?></td>
-                        <td class="px-4 py-2 text-right font-semibold text-green-600">$<?php echo number_format($customer['total_spent'], 2); ?></td>
-                        <td class="px-4 py-2 text-gray-600">
+                        <td class="px-4 py-2 text-right font-semibold text-green-600 whitespace-nowrap">₹<?php echo number_format($customer['total_spent'], 2); ?></td>
+                        <td class="px-4 py-2 text-gray-600 whitespace-nowrap">
                             <?php echo $customer['last_order_date'] ? date('M d, Y', strtotime($customer['last_order_date'])) : 'No orders'; ?>
                         </td>
-                        <td class="px-4 py-2 text-center">
+                        <td class="px-4 py-2 text-center whitespace-nowrap">
                             <span class="px-2 py-1 rounded-full text-xs <?php echo $customer['status'] === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
                                 <?php echo ucfirst($customer['status']); ?>
                             </span>
                         </td>
-                        <td class="px-4 py-2 text-center">
+                        <td class="px-4 py-2 text-center whitespace-nowrap">
                             <a href="<?php echo SITE_URL; ?>/admin/customers?search=<?php echo urlencode($customer['email']); ?>" 
                                class="text-pink-600 hover:text-pink-700 text-sm">View</a>
                         </td>
@@ -426,18 +459,18 @@ $days = $days ?? 30;
         
         <!-- Pagination -->
         <?php if ($totalCustomers > $perPage): ?>
-        <div class="mt-4 flex items-center justify-between">
+        <div class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="text-sm text-gray-600">
                 Showing <?php echo (($currentPage - 1) * $perPage) + 1; ?> to <?php echo min($currentPage * $perPage, $totalCustomers); ?> of <?php echo number_format($totalCustomers); ?> customers
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 w-full sm:w-auto">
                 <?php if ($currentPage > 1): ?>
                     <a href="?type=customer&page=<?php echo $currentPage - 1; ?>&<?php echo http_build_query($filters); ?>" 
-                       class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Previous</a>
+                       class="flex-1 sm:flex-none text-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Previous</a>
                 <?php endif; ?>
                 <?php if ($currentPage * $perPage < $totalCustomers): ?>
                     <a href="?type=customer&page=<?php echo $currentPage + 1; ?>&<?php echo http_build_query($filters); ?>" 
-                       class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Next</a>
+                       class="flex-1 sm:flex-none text-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Next</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -473,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Customer Growth Chart
+    // Customer Growth Chart (Dual-Wave Trendy)
     const growthCtx = document.getElementById('growthChart');
     if (growthCtx) {
         const growthData = <?php echo json_encode($customerGrowth); ?>;
@@ -483,38 +516,150 @@ document.addEventListener('DOMContentLoaded', function() {
                 return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             });
             const newCustomers = growthData.map(item => parseInt(item.new_customers) || 0);
+            const totalCustomers = growthData.map(item => parseInt(item.total_customers) || 0);
+
+            // Create gradients
+            const ctx = growthCtx.getContext('2d');
+            
+            // Gradient for Total Customers (Smooth Purple Wave)
+            const gradientTotal = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientTotal.addColorStop(0, 'rgba(139, 92, 246, 0.5)'); // Violet-500
+            gradientTotal.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
+
+            // Gradient for New Customers (Vibrant Pink Wave)
+            const gradientNew = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientNew.addColorStop(0, 'rgba(244, 114, 182, 0.6)'); // Pink-400
+            gradientNew.addColorStop(1, 'rgba(244, 114, 182, 0.0)');
             
             new Chart(growthCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'New Customers',
-                    data: newCustomers,
-                    borderColor: 'rgb(219, 39, 119)',
-                    backgroundColor: 'rgba(219, 39, 119, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    }
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Total Customers',
+                            data: totalCustomers,
+                            borderColor: '#8b5cf6', // Violet-500
+                            backgroundColor: gradientTotal,
+                            borderWidth: 0, // No border for ultra-clean look, or keep thin? User said "lines". Let's keep thin.
+                            borderWidth: 2,
+                            tension: 0.5, // Wave style
+                            pointRadius: 0, // Hidden points
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#8b5cf6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'New Customers',
+                            data: newCustomers,
+                            borderColor: '#f472b6', // Pink-400
+                            backgroundColor: gradientNew,
+                            borderWidth: 2,
+                            tension: 0.5, // Wave style
+                            pointRadius: 0, // Hidden points
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#f472b6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            fill: true,
+                            yAxisID: 'y1'
+                        }
+                    ]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                boxWidth: 8,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: {
+                                    size: 11,
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            titleColor: '#111827',
+                            bodyColor: '#4b5563',
+                            borderColor: 'rgba(229, 231, 235, 0.5)',
+                            borderWidth: 1,
+                            padding: 10,
+                            boxPadding: 4,
+                            usePointStyle: true,
+                            bodyFont: {
+                                family: "'Inter', sans-serif",
+                                size: 12
+                            },
+                            titleFont: {
+                                family: "'Inter', sans-serif",
+                                size: 12,
+                                weight: '600'
+                            },
+                            displayColors: true
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                autoSkip: true,
+                                maxRotation: 0,
+                                minRotation: 0,
+                                font: {
+                                    size: 10
+                                },
+                                color: '#9ca3af'
+                            }
+                        },
+                        y: {
+                            display: false, // Hide Total axis labels for cleaner look? User asked for "Clean axis labels". Let's keep distinct but minimal.
+                            // Actually, let's keep them but very subtle.
+                            position: 'left',
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                display: true,
+                                color: '#a78bfa', // Light violet
+                                font: { size: 9 },
+                                maxTicksLimit: 5
+                            }
+                        },
+                        y1: {
+                            display: false, // Hide New axis labels to reduce clutter? Or Keep right?
+                            // User asked for "Clean axis labels". 
+                            position: 'right',
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                display: true,
+                                color: '#fbcfe8', // Light pink
+                                font: { size: 9 },
+                                maxTicksLimit: 5
+                            }
                         }
                     }
                 }
-            }
             });
         }
     }
@@ -555,45 +700,134 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Retention Chart
+    // Retention Trend Chart (Line/Area)
     const retentionCtx = document.getElementById('retentionChart');
     if (retentionCtx) {
-        const retentionData = {
-            oneTime: <?php echo $retentionMetrics['one_time_buyers'] ?? 0; ?>,
-            repeat: <?php echo $retentionMetrics['repeat_buyers'] ?? 0; ?>
-        };
+        const trendData = <?php echo json_encode($retentionTrend ?? []); ?>;
         
-        if (retentionData.oneTime > 0 || retentionData.repeat > 0) {
+        if (trendData && trendData.length > 0) {
+            const labels = trendData.map(item => {
+                const date = new Date(item.date);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
+            const newOrders = trendData.map(item => parseInt(item.new_customer_orders) || 0);
+            const returnOrders = trendData.map(item => parseInt(item.returning_customer_orders) || 0);
+
+            // Create gradients
+            const ctx = retentionCtx.getContext('2d');
+            
+            const gradientNew = ctx.createLinearGradient(0, 0, 0, 300);
+            gradientNew.addColorStop(0, 'rgba(236, 72, 153, 0.4)'); // Pink-500
+            gradientNew.addColorStop(1, 'rgba(236, 72, 153, 0.05)');
+
+            const gradientReturn = ctx.createLinearGradient(0, 0, 0, 300);
+            gradientReturn.addColorStop(0, 'rgba(59, 130, 246, 0.4)'); // Blue-500
+            gradientReturn.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
+
             new Chart(retentionCtx, {
-            type: 'bar',
-            data: {
-                labels: ['One-Time Buyers', 'Repeat Buyers'],
-                datasets: [{
-                    label: 'Customers',
-                    data: [retentionData.oneTime, retentionData.repeat],
-                    backgroundColor: [
-                        'rgba(59, 130, 246, 0.8)',
-                        'rgba(16, 185, 129, 0.8)'
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Returning Customer Orders',
+                            data: returnOrders,
+                            borderColor: '#3b82f6', // Blue-500
+                            backgroundColor: gradientReturn,
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#3b82f6',
+                            pointBorderWidth: 2,
+                            fill: true
+                        },
+                        {
+                            label: 'New Customer Orders',
+                            data: newOrders,
+                            borderColor: '#ec4899', // Pink-500
+                            backgroundColor: gradientNew,
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#ec4899',
+                            pointBorderWidth: 2,
+                            fill: true
+                        }
                     ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                boxWidth: 10,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: {
+                                    size: 11,
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1f2937',
+                            bodyColor: '#4b5563',
+                            borderColor: '#e5e7eb',
+                            borderWidth: 1,
+                            padding: 12,
+                            boxPadding: 4,
+                            usePointStyle: true,
+                            bodyFont: {
+                                family: "'Inter', sans-serif"
+                            },
+                            titleFont: {
+                                family: "'Inter', sans-serif",
+                                weight: '600'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                },
+                                color: '#9ca3af'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            border: {
+                                display: false
+                            },
+                            grid: {
+                                color: '#f3f4f6',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                stepSize: 1,
+                                font: {
+                                    size: 10
+                                },
+                                color: '#9ca3af'
+                            }
                         }
                     }
                 }
-            }
             });
         }
     }

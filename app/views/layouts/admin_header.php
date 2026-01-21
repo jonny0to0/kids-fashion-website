@@ -16,6 +16,10 @@
     <!-- SweetAlert2 for notifications -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Flatpickr for Date Inputs -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     <!-- Set SITE_URL for JavaScript -->
     <script>
         window.SITE_URL = '<?php echo SITE_URL; ?>';
@@ -361,10 +365,11 @@
     $isOrdersReturns = $isOrders && ($orderStatus === ORDER_STATUS_RETURNED || $orderStatus === 'returns' || $orderStatus === 'refunds');
 
     // 4. Customers Section
-    $isCustomers = $checkPath('admin/customers');
-    $isCustomerList = $isCustomers && !$checkPath('admin/customers/groups') && !$checkPath('admin/customers/reviews');
+    $isCustomers = $checkPath('admin/customers') || $checkPath('admin/support');
+    $isCustomerList = $isCustomers && !$checkPath('admin/customers/groups') && !$checkPath('admin/customers/reviews') && !$checkPath('admin/support');
     $isCustomerGroups = $checkPath('admin/customers/groups');
     $isCustomerReviews = $checkPath('admin/customers/reviews') || $checkPath('admin/customers/feedback');
+    $isCustomerSupport = $checkPath('admin/support');
 
     // 5. Marketing Section
     $isMarketing = $checkPath('admin/promotions') || $checkPath('admin/coupons') || $checkPath('admin/discounts') || $checkPath('admin/hero-banners') || $checkPath('admin/campaigns');
@@ -382,11 +387,7 @@
     $isProductReports = $checkPath('admin/reports') && $reportType === 'product';
     $isCustomerReports = $checkPath('admin/reports') && $reportType === 'customer';
 
-    // 7. Support Section
-    $isSupport = $checkPath('admin/support');
-    $isSupportTickets = $checkPath('admin/support/tickets') || $checkPath('admin/support/queries') || ($isSupport && !$checkPath('admin/support/chat') && !$checkPath('admin/support/disputes'));
-    $isSupportChat = $checkPath('admin/support/chat') || $checkPath('admin/support/live-chat');
-    $isSupportDisputes = $checkPath('admin/support/disputes');
+
 
     // 8. Settings Section
     $isSettings = $checkPath('admin/settings');
@@ -433,8 +434,7 @@
         }
     } elseif ($isReports || $isRevenueReports) {
         $activeSubmenu = 'reports';
-    } elseif ($isSupport) {
-        $activeSubmenu = 'support';
+
     } elseif ($isSettings) {
         $activeSubmenu = 'settings';
         if ($isSettingsStore) {
@@ -636,7 +636,7 @@
                     <div class="sidebar-submenu <?php echo $isCustomers ? 'open' : ''; ?>" data-submenu="customers">
                         <a href="<?php echo SITE_URL; ?>/admin/customers"
                             class="sidebar-submenu-item <?php echo $isCustomerList ? 'active' : ''; ?>">
-                            Customer List
+                            Manage Customers
                         </a>
                         <a href="<?php echo SITE_URL; ?>/admin/customers/groups"
                             class="sidebar-submenu-item <?php echo $isCustomerGroups ? 'active' : ''; ?>">
@@ -645,6 +645,10 @@
                         <a href="<?php echo SITE_URL; ?>/admin/customers/reviews"
                             class="sidebar-submenu-item <?php echo $isCustomerReviews ? 'active' : ''; ?>">
                             Reviews & Feedback
+                        </a>
+                        <a href="<?php echo SITE_URL; ?>/admin/support"
+                            class="sidebar-submenu-item <?php echo $isCustomerSupport ? 'active' : ''; ?>">
+                            Support / Complaints
                         </a>
                     </div>
                 </div>
@@ -739,37 +743,7 @@
                     </div>
                 </div>
 
-                <!-- 7. Support -->
-                <div>
-                    <div class="sidebar-menu-item <?php echo $isSupport ? 'active' : ''; ?>"
-                        data-submenu-toggle="support" style="cursor: pointer;">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z">
-                            </path>
-                        </svg>
-                        <span class="flex-1">Support</span>
-                        <svg class="w-4 h-4 transition-transform submenu-arrow" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
-                            </path>
-                        </svg>
-                    </div>
-                    <div class="sidebar-submenu <?php echo $isSupport ? 'open' : ''; ?>" data-submenu="support">
-                        <a href="<?php echo SITE_URL; ?>/admin/support/tickets"
-                            class="sidebar-submenu-item <?php echo $isSupportTickets ? 'active' : ''; ?>">
-                            Queries / Tickets
-                        </a>
-                        <a href="<?php echo SITE_URL; ?>/admin/support/chat"
-                            class="sidebar-submenu-item <?php echo $isSupportChat ? 'active' : ''; ?>">
-                            Live Chat
-                        </a>
-                        <a href="<?php echo SITE_URL; ?>/admin/support/disputes"
-                            class="sidebar-submenu-item <?php echo $isSupportDisputes ? 'active' : ''; ?>">
-                            Dispute Management
-                        </a>
-                    </div>
-                </div>
+
 
                 <!-- 8. Settings -->
                 <div>
@@ -1005,7 +979,7 @@
             </header>
 
             <!-- Page Content -->
-            <main class="p-6" style="width: 100%; box-sizing: border-box;">
+            <main class="p-2 md:p-6" style="width: 100%; box-sizing: border-box;">
 
                 <!-- Flash Messages -->
                 <?php if ($flashMessage = Session::getFlash('success')): ?>

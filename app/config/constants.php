@@ -12,6 +12,7 @@ define('USER_TYPE_VENDOR', 'vendor');
 // User Status
 define('USER_STATUS_ACTIVE', 'active');
 define('USER_STATUS_SUSPENDED', 'suspended');
+define('USER_STATUS_DEACTIVATED', 'deactivated');
 define('USER_STATUS_DELETED', 'deleted');
 
 // Product Status

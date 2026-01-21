@@ -80,14 +80,56 @@ function showAlert(title, message, icon = 'info', confirmText = 'OK') {
     });
 }
 
+// Global Fetch Interceptor to handle forceLogout
+const originalFetch = window.fetch;
+window.fetch = async function (...args) {
+    try {
+        const response = await originalFetch(...args);
+
+        // Clone response to check body without consuming it
+        const clone = response.clone();
+
+        // Check content type
+        const contentType = clone.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            try {
+                const data = await clone.json();
+
+                // Check for forceLogout flag
+                if (data.forceLogout === true) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Account Deactivated',
+                        text: data.message || 'Your account has been deactivated.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#ef4444'
+                    });
+
+                    window.location.href = (window.SITE_URL || '') + '/user/logout';
+                    // Return a promise that never resolves to stop further processing
+                    return new Promise(() => { });
+                }
+            } catch (e) {
+                // Ignore JSON parse errors
+            }
+        }
+
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Update cart count
     updateCartCount();
-    
+
     // Update wishlist count
     updateWishlistCount();
-    
+
     // Handle PHP flash messages with SweetAlert
     const flashMessages = document.querySelectorAll('[role="alert"][data-flash-type]');
     flashMessages.forEach(flash => {
@@ -101,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 100);
         }
     });
-    
+
     // Initialize scroll-based header behavior
     initScrollHeader();
 });
@@ -112,25 +154,25 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function initScrollHeader() {
     const mainNav = document.getElementById('main-nav');
-    
+
     if (!mainNav) {
         return; // Element not found, skip initialization
     }
-    
+
     let lastScrollTop = 0;
     let mainNavTimeout = null;
-    
+
     // Scroll threshold to avoid jittery behavior at the top
     const SCROLL_THRESHOLD = 10;
     // Delay before hiding main nav when scrolling down
     const HIDE_NAV_DELAY = 250; // ms
-    
+
     function handleScroll() {
         const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        
+
         // Clear any pending timeouts
         if (mainNavTimeout) clearTimeout(mainNavTimeout);
-        
+
         // Only activate behavior after scrolling past threshold
         if (currentScrollTop < SCROLL_THRESHOLD) {
             // At top of page, ensure nav is visible
@@ -138,17 +180,17 @@ function initScrollHeader() {
             lastScrollTop = currentScrollTop;
             return;
         }
-        
+
         // Determine scroll direction
         const scrollingDown = currentScrollTop > lastScrollTop;
         const scrollDifference = Math.abs(currentScrollTop - lastScrollTop);
-        
+
         // Only trigger if scroll difference is significant enough (avoid micro-scrolls)
         if (scrollDifference < 5) {
             lastScrollTop = currentScrollTop;
             return;
         }
-        
+
         if (scrollingDown) {
             // Scrolling down: Hide main nav
             mainNavTimeout = setTimeout(() => {
@@ -158,22 +200,22 @@ function initScrollHeader() {
             // Scrolling up: Show main nav
             mainNav.classList.remove('nav-hidden');
         }
-        
+
         lastScrollTop = currentScrollTop;
     }
-    
+
     // Throttled scroll handler using requestAnimationFrame
     let ticking = false;
-    window.addEventListener('scroll', function() {
+    window.addEventListener('scroll', function () {
         if (!ticking) {
-            window.requestAnimationFrame(function() {
+            window.requestAnimationFrame(function () {
                 handleScroll();
                 ticking = false;
             });
             ticking = true;
         }
     }, { passive: true });
-    
+
     // Initialize state at page load
     handleScroll();
 }
@@ -182,7 +224,7 @@ function initScrollHeader() {
 async function updateCartCount() {
     try {
         // Use SITE_URL from window (set by PHP) or detect it
-        const siteUrl = window.SITE_URL || (function() {
+        const siteUrl = window.SITE_URL || (function () {
             const path = window.location.pathname;
             if (path.includes('/kid-bazar-ecom/public')) {
                 return window.location.origin + '/kid-bazar-ecom/public';
@@ -192,7 +234,7 @@ async function updateCartCount() {
             }
             return window.location.origin;
         })();
-        
+
         const response = await fetch(siteUrl + '/cart/get-count', {
             method: 'GET',
             headers: {
@@ -226,9 +268,9 @@ async function updateWishlistCount() {
         if (!window.SITE_URL) {
             return;
         }
-        
+
         // Use SITE_URL from window (set by PHP) or detect it
-        const siteUrl = window.SITE_URL || (function() {
+        const siteUrl = window.SITE_URL || (function () {
             const path = window.location.pathname;
             if (path.includes('/kid-bazar-ecom/public')) {
                 return window.location.origin + '/kid-bazar-ecom/public';
@@ -238,7 +280,7 @@ async function updateWishlistCount() {
             }
             return window.location.origin;
         })();
-        
+
         const response = await fetch(siteUrl + '/user/wishlist-get-count', {
             method: 'GET',
             headers: {
@@ -280,43 +322,43 @@ async function toggleWishlist(productId) {
             showToast('Please login to add items to wishlist', 'error');
             return;
         }
-        
+
         const siteUrl = window.SITE_URL;
         const wishlistBtn = document.querySelector(`.wishlist-btn-${productId}`);
-        
+
         if (!wishlistBtn) {
             console.error('Wishlist button not found for product:', productId);
             showToast('Error: Wishlist button not found', 'error');
             return;
         }
-        
+
         const svg = wishlistBtn.querySelector('svg');
         if (!svg) {
             console.error('SVG element not found in wishlist button');
             showToast('Error: SVG element not found', 'error');
             return;
         }
-        
+
         const isInWishlist = wishlistBtn.classList.contains('in-wishlist');
-        
+
         // If removing from wishlist, proceed normally (requires auth)
         if (isInWishlist) {
             const endpoint = '/user/wishlistRemove';
             const formData = new FormData();
             formData.append('product_id', productId);
-            
+
             const response = await fetch(siteUrl + endpoint, {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin'
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 // Update button state
                 wishlistBtn.classList.remove('in-wishlist');
@@ -324,7 +366,7 @@ async function toggleWishlist(productId) {
                 svg.classList.add('text-gray-700');
                 svg.setAttribute('fill', 'none');
                 wishlistBtn.setAttribute('title', 'Add to Wishlist');
-                
+
                 // Update wishlist count if provided
                 if (data.count !== undefined) {
                     const wishlistCountEl = document.getElementById('wishlist-count');
@@ -339,31 +381,31 @@ async function toggleWishlist(productId) {
                 } else if (typeof updateWishlistCount === 'function') {
                     updateWishlistCount();
                 }
-                
+
                 showToast(data.message || 'Removed from wishlist', 'success');
             } else {
                 showToast(data.message || 'Failed to remove from wishlist', 'error');
             }
             return;
         }
-        
+
         // Adding to wishlist - check authentication first
         const formData = new FormData();
         formData.append('product_id', productId);
         formData.append('check_auth', '1'); // Flag to check auth without requiring it
-        
+
         const response = await fetch(siteUrl + '/user/wishlistAdd', {
             method: 'POST',
             body: formData,
             credentials: 'same-origin'
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         // If user is not authenticated, redirect to login with product ID
         if (data.requires_auth === true || data.success === false && (data.message && data.message.toLowerCase().includes('login'))) {
             // Store product ID in session via backend and redirect to login
@@ -371,7 +413,7 @@ async function toggleWishlist(productId) {
             window.location.href = siteUrl + '/user/login?wishlist_product=' + productId + '&redirect=' + encodeURIComponent(currentUrl);
             return;
         }
-        
+
         if (data.success) {
             // Update button state
             wishlistBtn.classList.add('in-wishlist');
@@ -379,7 +421,7 @@ async function toggleWishlist(productId) {
             svg.classList.remove('text-gray-700');
             svg.setAttribute('fill', 'currentColor');
             wishlistBtn.setAttribute('title', 'Remove from Wishlist');
-            
+
             // Update wishlist count if provided
             if (data.count !== undefined) {
                 const wishlistCountEl = document.getElementById('wishlist-count');
@@ -394,7 +436,7 @@ async function toggleWishlist(productId) {
             } else if (typeof updateWishlistCount === 'function') {
                 updateWishlistCount();
             }
-            
+
             showToast(data.message || 'Added to wishlist', 'success');
         } else {
             showToast(data.message || 'Failed to add to wishlist', 'error');
@@ -414,12 +456,12 @@ function productSlider() {
         touchStartX: 0,
         touchEndX: 0,
         isTransitioning: false,
-        
+
         init() {
             // Count actual slides available
             const slides = document.querySelectorAll('.hero-slide');
             this.totalSlides = slides.length;
-            
+
             // Only start autoplay if there are multiple slides
             if (this.totalSlides > 1) {
                 // Delay autoplay start for better initial load experience
@@ -428,24 +470,24 @@ function productSlider() {
                 }, 3000);
             }
         },
-        
+
         startAutoplay() {
             if (this.totalSlides <= 1 || this.isTransitioning) return;
-            
+
             this.autoplayInterval = setInterval(() => {
                 if (!this.isTransitioning) {
                     this.nextSlide();
                 }
             }, 6000); // Change slide every 6 seconds
         },
-        
+
         stopAutoplay() {
             if (this.autoplayInterval) {
                 clearInterval(this.autoplayInterval);
                 this.autoplayInterval = null;
             }
         },
-        
+
         nextSlide() {
             if (this.totalSlides <= 1 || this.isTransitioning) return;
             this.isTransitioning = true;
@@ -456,7 +498,7 @@ function productSlider() {
                 this.isTransitioning = false;
             }, 800);
         },
-        
+
         prevSlide() {
             if (this.totalSlides <= 1 || this.isTransitioning) return;
             this.isTransitioning = true;
@@ -467,7 +509,7 @@ function productSlider() {
                 this.isTransitioning = false;
             }, 800);
         },
-        
+
         goToSlide(index) {
             if (this.totalSlides <= 1 || this.isTransitioning) return;
             if (index >= 0 && index < this.totalSlides && index !== this.currentSlide) {
@@ -480,7 +522,7 @@ function productSlider() {
                 }, 800);
             }
         },
-        
+
         restartAutoplay() {
             this.stopAutoplay();
             if (this.totalSlides > 1) {
@@ -489,26 +531,26 @@ function productSlider() {
                 }, 100);
             }
         },
-        
+
         // Touch event handlers for mobile swipe support
         handleTouchStart(event) {
             this.touchStartX = event.touches[0].clientX;
         },
-        
+
         handleTouchMove(event) {
             // Prevent default to avoid scrolling while swiping
             if (Math.abs(event.touches[0].clientX - this.touchStartX) > 10) {
                 event.preventDefault();
             }
         },
-        
+
         handleTouchEnd(event) {
             if (!this.touchStartX || !event.changedTouches[0]) return;
-            
+
             this.touchEndX = event.changedTouches[0].clientX;
             const swipeDistance = this.touchStartX - this.touchEndX;
             const minSwipeDistance = 50; // Minimum distance for a swipe
-            
+
             if (Math.abs(swipeDistance) > minSwipeDistance) {
                 if (swipeDistance > 0) {
                     // Swipe left - next slide
@@ -518,7 +560,7 @@ function productSlider() {
                     this.prevSlide();
                 }
             }
-            
+
             // Reset touch values
             this.touchStartX = 0;
             this.touchEndX = 0;
@@ -539,7 +581,7 @@ function categorySlider(totalCategories) {
         containerWidth: 0,
         resizeTimeout: null,
         dimensionsCalculated: false,
-        
+
         // Pagination dots
         get totalPages() {
             if (!this.dimensionsCalculated || this.itemsPerView === 0 || this.totalCategories === 0) {
@@ -550,13 +592,13 @@ function categorySlider(totalCategories) {
             // Each page shows itemsPerView items, so we need ceil(totalCategories / itemsPerView) pages
             return Math.ceil(this.totalCategories / this.itemsPerView);
         },
-        
+
         get pagesArray() {
             // Create an array of page indices for x-for directive
             const pages = this.totalPages;
             return Array.from({ length: pages }, (_, i) => i);
         },
-        
+
         get currentPage() {
             if (!this.dimensionsCalculated || this.itemsPerView === 0) {
                 return 0;
@@ -570,7 +612,7 @@ function categorySlider(totalCategories) {
                 this.totalPages - 1
             );
         },
-        
+
         init() {
             // Wait for images to load before calculating dimensions
             const wrapper = this.$el;
@@ -578,7 +620,7 @@ function categorySlider(totalCategories) {
                 const images = wrapper.querySelectorAll('img');
                 let imagesLoaded = 0;
                 const totalImages = images.length;
-                
+
                 if (totalImages > 0) {
                     // Wait for all images to load
                     images.forEach(img => {
@@ -606,7 +648,7 @@ function categorySlider(totalCategories) {
                             });
                         }
                     });
-                    
+
                     // If all images already loaded
                     if (imagesLoaded === totalImages) {
                         setTimeout(() => {
@@ -616,27 +658,27 @@ function categorySlider(totalCategories) {
                     }
                 }
             }
-            
+
             // Calculate dimensions immediately (fallback)
             this.calculateDimensions();
-            
+
             // Also try after delays to ensure DOM is ready
             setTimeout(() => {
                 this.calculateDimensions();
                 this.updateItemsPerView();
             }, 200);
-            
+
             setTimeout(() => {
                 this.calculateDimensions();
                 this.updateItemsPerView();
             }, 500);
-            
+
             // Wait for DOM to be ready
             this.$nextTick(() => {
                 this.calculateDimensions();
                 this.updateItemsPerView();
             });
-            
+
             // Recalculate on window resize with debounce
             window.addEventListener('resize', () => {
                 clearTimeout(this.resizeTimeout);
@@ -646,25 +688,25 @@ function categorySlider(totalCategories) {
                 }, 150);
             });
         },
-        
+
         calculateDimensions() {
             // Find the container within this component's scope
             const wrapper = this.$el;
             if (!wrapper) return;
-            
+
             const container = wrapper.querySelector('.category-slider-container');
             if (!container) return;
-            
+
             // Get the actual visible width (container width, which is inside the padded wrapper)
             this.containerWidth = container.offsetWidth;
             if (this.containerWidth === 0) {
                 // Try again after a delay if container not ready
                 return;
             }
-            
+
             // Get the track element to check actual content width
             const track = container.querySelector('.category-slider-track');
-            
+
             // Get the first item to calculate actual width
             const firstItem = container.querySelector('.category-slider-item');
             if (firstItem && firstItem.offsetWidth > 0) {
@@ -672,13 +714,13 @@ function categorySlider(totalCategories) {
                 // Calculate item width including padding
                 const itemWidth = firstItem.offsetWidth;
                 this.itemWidth = itemWidth;
-                
+
                 // Calculate how many items fit in the viewport
                 // Be very conservative - subtract 1 to ensure arrows show when needed
                 // This accounts for rounding errors and ensures arrows appear
                 const calculatedItemsPerView = Math.floor(this.containerWidth / this.itemWidth);
                 this.itemsPerView = Math.max(1, calculatedItemsPerView - 1);
-                
+
                 // Additional check: if track width exceeds container width, we definitely need arrows
                 if (track && track.scrollWidth > this.containerWidth) {
                     // Force itemsPerView to be less than totalCategories to show arrows
@@ -686,7 +728,7 @@ function categorySlider(totalCategories) {
                         this.itemsPerView = Math.max(1, this.totalCategories - 1);
                     }
                 }
-                
+
                 this.dimensionsCalculated = true;
             } else {
                 // Fallback calculation based on screen size
@@ -704,7 +746,7 @@ function categorySlider(totalCategories) {
                 this.dimensionsCalculated = true;
             }
         },
-        
+
         updateItemsPerView() {
             // itemsPerView is already an integer (Math.floor applied in calculateDimensions)
             if (this.totalCategories <= this.itemsPerView) {
@@ -712,29 +754,29 @@ function categorySlider(totalCategories) {
                 this.currentIndex = 0;
                 return;
             }
-            
+
             const maxIndex = Math.max(0, this.totalCategories - this.itemsPerView);
             if (this.currentIndex > maxIndex) {
                 this.currentIndex = maxIndex;
             }
         },
-        
+
         slideNext() {
             // itemsPerView is already an integer (Math.floor applied in calculateDimensions)
             if (this.totalCategories <= this.itemsPerView) return;
-            
+
             const maxIndex = Math.max(0, this.totalCategories - this.itemsPerView);
             if (this.currentIndex < maxIndex) {
                 this.currentIndex = Math.min(this.currentIndex + 1, maxIndex);
             }
         },
-        
+
         slidePrev() {
             if (this.currentIndex > 0) {
                 this.currentIndex = Math.max(0, this.currentIndex - 1);
             }
         },
-        
+
         goToPage(pageIndex) {
             if (!this.dimensionsCalculated || this.itemsPerView === 0) {
                 return;
@@ -745,7 +787,7 @@ function categorySlider(totalCategories) {
             const maxIndex = Math.max(0, this.totalCategories - this.itemsPerView);
             this.currentIndex = Math.min(targetIndex, maxIndex);
         },
-        
+
         get showPrevArrow() {
             // Show if we can go back and there are more items than can fit
             if (!this.dimensionsCalculated) {
@@ -761,18 +803,18 @@ function categorySlider(totalCategories) {
             // Show if we're not at the start and there are more items than can fit
             return this.currentIndex > 0 && this.totalCategories > this.itemsPerView;
         },
-        
+
         get showNextArrow() {
             // Always show if we have significantly more categories than a reasonable fit
             // This is a persistent safety check
             if (this.totalCategories > 8) {
                 // If we have more than 8 categories, almost certainly need arrows
-                const maxIndex = this.dimensionsCalculated 
+                const maxIndex = this.dimensionsCalculated
                     ? Math.max(0, this.totalCategories - this.itemsPerView)
                     : this.totalCategories - 5;
                 return this.currentIndex < maxIndex;
             }
-            
+
             // Show if there are more items to show
             if (!this.dimensionsCalculated) {
                 // Before dimensions are calculated, show if we have many categories
@@ -784,7 +826,7 @@ function categorySlider(totalCategories) {
                 // Fallback: show if we have many categories
                 return this.totalCategories > 5;
             }
-            
+
             // Check actual DOM overflow as a definitive test
             const wrapper = this.$el;
             if (wrapper) {
@@ -798,7 +840,7 @@ function categorySlider(totalCategories) {
                     }
                 }
             }
-            
+
             // itemsPerView is already conservative (subtracted 1), so use it directly
             // If all items fit, don't show arrow
             if (this.totalCategories <= this.itemsPerView) {
@@ -808,25 +850,25 @@ function categorySlider(totalCategories) {
             const maxIndex = Math.max(0, this.totalCategories - this.itemsPerView);
             return this.currentIndex < maxIndex;
         },
-        
+
         // Touch event handlers
         handleTouchStart(event) {
             this.touchStartX = event.touches[0].clientX;
             this.isDragging = true;
         },
-        
+
         handleTouchMove(event) {
             if (!this.isDragging) return;
             this.touchEndX = event.touches[0].clientX;
         },
-        
+
         handleTouchEnd(event) {
             if (!this.isDragging) return;
             this.isDragging = false;
-            
+
             const swipeThreshold = 50; // Minimum distance for swipe
             const diff = this.touchStartX - this.touchEndX;
-            
+
             if (Math.abs(diff) > swipeThreshold) {
                 if (diff > 0) {
                     // Swiped left - go to next
@@ -836,7 +878,7 @@ function categorySlider(totalCategories) {
                     this.slidePrev();
                 }
             }
-            
+
             // Reset touch positions
             this.touchStartX = 0;
             this.touchEndX = 0;

@@ -3439,8 +3439,89 @@ class AdminController
     }
 
     /**
-     * Order Detail (Admin)
+     * Get revenue trend data (AJAX)
+     * Used for updating the chart without page reload
      */
+    public function ordersRevenueData()
+    {
+        // Check if request is AJAX
+        if (empty($_SERVER['HTTP_X_REQUESTED_WITH']) || strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') {
+            // Allow if it accepts json
+            $accepts = $_SERVER['HTTP_ACCEPT'] ?? '';
+            if (strpos($accepts, 'application/json') === false) {
+                 // Fallback or error if not intended for direct access, but for now allow testing
+            }
+        }
+
+        $revenueFilters = [];
+        if (isset($_GET['revenue_date_from'])) {
+            $revenueFilters['revenue_date_from'] = $_GET['revenue_date_from'];
+        }
+        if (isset($_GET['revenue_date_to'])) {
+            $revenueFilters['revenue_date_to'] = $_GET['revenue_date_to'];
+        }
+
+        // Default to 30 days if no date provided
+        $revenueTrend = $this->getRevenueTrend(30, $revenueFilters);
+        
+        // Prepare data for Chart.js
+        $labels = [];
+        $data = [];
+        
+        // If we have a date range, ensure we have all dates filled in
+        if (!empty($revenueFilters['revenue_date_from'])) {
+            $startDate = new DateTime($revenueFilters['revenue_date_from']);
+            // If to_date is not set, use today
+            $endDate = !empty($revenueFilters['revenue_date_to']) 
+                ? new DateTime($revenueFilters['revenue_date_to']) 
+                : new DateTime(); // Today
+                
+            // Generate full date range map
+            $dateMap = [];
+            $interval = new DateInterval('P1D');
+            $period = new DatePeriod($startDate, $interval, $endDate->modify('+1 day'));
+            
+            foreach ($period as $dt) {
+                $dateKey = $dt->format('Y-m-d');
+                $labels[] = $dt->format('M d');
+                $data[] = 0;
+                $dateMap[$dateKey] = count($data) - 1;
+            }
+            
+            // Fill with actual data
+            foreach ($revenueTrend as $item) {
+                $date = $item['date'] ?? '';
+                if (isset($dateMap[$date])) {
+                    $data[$dateMap[$date]] = (float)($item['revenue'] ?? 0);
+                }
+            }
+        } else {
+            // Default 30 days logic (similar to viewed in index.php)
+            // But good to replicate here for consistency
+            $dateMap = [];
+            for ($i = 29; $i >= 0; $i--) {
+                $date = date('Y-m-d', strtotime("-$i days"));
+                $labels[] = date('M d', strtotime($date));
+                $data[] = 0;
+                $dateMap[$date] = count($data) - 1;
+            }
+
+            foreach ($revenueTrend as $item) {
+                $date = $item['date'] ?? '';
+                if (isset($dateMap[$date])) {
+                    $data[$dateMap[$date]] = (float)($item['revenue'] ?? 0);
+                }
+            }
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'labels' => $labels,
+            'data' => $data,
+            'total_revenue' => array_sum($data) // Optional extra
+        ]);
+        exit;
+    }
     public function orderDetail($orderId)
     {
         $order = $this->orderModel->getOrderWithDetails($orderId);
@@ -4872,9 +4953,15 @@ class AdminController
     {
         $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
         $search = Validator::sanitize($_GET['search'] ?? '');
+        $status = Validator::sanitize($_GET['status'] ?? '');
 
         $sql = "SELECT *, CONCAT(first_name, ' ', last_name) as name FROM users WHERE user_type = ?";
         $params = [USER_TYPE_CUSTOMER];
+
+        if (!empty($status)) {
+            $sql .= " AND status = ?";
+            $params[] = $status;
+        }
 
         if (!empty($search)) {
             $sql .= " AND (first_name LIKE ? OR last_name LIKE ? OR CONCAT(first_name, ' ', last_name) LIKE ? OR email LIKE ? OR phone LIKE ?)";
@@ -4891,6 +4978,12 @@ class AdminController
         // Get total count
         $countSql = "SELECT COUNT(*) as total FROM users WHERE user_type = ?";
         $countParams = [USER_TYPE_CUSTOMER];
+
+        if (!empty($status)) {
+            $countSql .= " AND status = ?";
+            $countParams[] = $status;
+        }
+
         if (!empty($search)) {
             $countSql .= " AND (first_name LIKE ? OR last_name LIKE ? OR CONCAT(first_name, ' ', last_name) LIKE ? OR email LIKE ? OR phone LIKE ?)";
             $searchTerm = '%' . $search . '%';
@@ -4912,10 +5005,12 @@ class AdminController
 
         $customers = $this->userModel->query($sql, $params)->fetchAll();
 
-        // Get order counts for each customer
+        // Get order stats for each customer
         foreach ($customers as &$customer) {
-            $orderCount = $this->orderModel->query("SELECT COUNT(*) as total FROM orders WHERE user_id = ?", [$customer['user_id']])->fetch()['total'] ?? 0;
-            $customer['order_count'] = $orderCount;
+            $stats = $this->orderModel->query("SELECT COUNT(*) as total, SUM(total_amount) as total_spend, MAX(created_at) as last_order FROM orders WHERE user_id = ?", [$customer['user_id']])->fetch();
+            $customer['order_count'] = $stats['total'] ?? 0;
+            $customer['total_spend'] = $stats['total_spend'] ?? 0;
+            $customer['last_order_date'] = $stats['last_order'] ?? null;
         }
 
         $pageTitle = 'Manage Customers';
@@ -4925,7 +5020,8 @@ class AdminController
             'total' => $total,
             'page' => $page,
             'perPage' => $perPage,
-            'search' => $search
+            'search' => $search,
+            'status' => $status
         ]);
     }
 
@@ -4953,7 +5049,7 @@ class AdminController
         $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
         $search = Validator::sanitize($_GET['search'] ?? '');
 
-        $sql = "SELECT r.*, p.name as product_name, p.sku,
+        $sql = "SELECT r.*, p.name as product_name, p.sku, p.slug as product_slug,
                 CONCAT(u.first_name, ' ', u.last_name) as customer_name, u.email as customer_email,
                 u.user_id
                 FROM reviews r
@@ -5055,7 +5151,7 @@ class AdminController
         } elseif ($reportType === 'product') {
             // Product performance
             $productPerformance = $this->orderModel->query("
-                SELECT p.name, p.sku, SUM(oi.quantity) as total_sold, SUM(oi.quantity * oi.price) as revenue
+                SELECT p.product_id, p.name, p.sku, p.slug, SUM(oi.quantity) as total_sold, SUM(oi.quantity * oi.price) as revenue
                 FROM order_items oi
                 JOIN orders o ON oi.order_id = o.order_id
                 JOIN products p ON oi.product_id = p.product_id
@@ -5090,20 +5186,22 @@ class AdminController
             // Get all customer report data
             try {
                 $summaryMetrics = $this->userModel->getCustomerSummaryMetrics($days);
-                $customerGrowth = $this->userModel->getCustomerGrowth($days);
+                $customerGrowth = $this->userModel->getCustomerGrowth($filters);
                 $customerSegmentation = $this->userModel->getCustomerSegmentation($days);
                 $customerValueMetrics = $this->userModel->getCustomerValueMetrics($days);
-                $retentionMetrics = $this->userModel->getRetentionMetrics($days);
+                $retentionMetrics = $this->userModel->getRetentionMetrics($filters);
+                $retentionTrend = $this->userModel->getRetentionTrend($filters);
                 $topCustomers = $this->userModel->getTopCustomers(20, $days);
                 $customersList = $this->userModel->getCustomersWithFilters($filters, $page, $perPage);
                 $totalCustomers = $this->userModel->getCustomersCountWithFilters($filters);
-
+                
                 // Ensure arrays are not null
                 $summaryMetrics = $summaryMetrics ?? ['total_customers' => 0, 'new_customers' => 0, 'active_customers' => 0, 'inactive_customers' => 0, 'customers_with_orders' => 0, 'returning_customers' => 0];
                 $customerGrowth = $customerGrowth ?? [];
                 $customerSegmentation = $customerSegmentation ?? [];
                 $customerValueMetrics = $customerValueMetrics ?? [];
                 $retentionMetrics = $retentionMetrics ?? ['one_time_buyers' => 0, 'repeat_buyers' => 0, 'total_customers' => 0];
+                $retentionTrend = $retentionTrend ?? [];
                 $topCustomers = $topCustomers ?? [];
                 $customersList = $customersList ?? [];
             } catch (Exception $e) {
@@ -5114,6 +5212,7 @@ class AdminController
                 $customerSegmentation = [];
                 $customerValueMetrics = [];
                 $retentionMetrics = ['one_time_buyers' => 0, 'repeat_buyers' => 0, 'total_customers' => 0];
+                $retentionTrend = [];
                 $topCustomers = [];
                 $customersList = [];
                 $totalCustomers = 0;
@@ -5142,6 +5241,7 @@ class AdminController
                 'customerSegmentation' => $customerSegmentation,
                 'customerValueMetrics' => $customerValueMetrics,
                 'retentionMetrics' => $retentionMetrics,
+                'retentionTrend' => $retentionTrend,
                 'retentionRate' => $retentionRate,
                 'avgAOV' => $avgAOV,
                 'avgCLV' => $avgCLV,
@@ -5209,56 +5309,140 @@ class AdminController
         ]);
     }
 
+
+
     /**
-     * Support / Queries Page
+     * Update customer status
      */
-    public function support()
+    public function updateCustomerStatus()
     {
-        // For now, show a placeholder page
-        // This can be enhanced later with a support ticket system
-        $pageTitle = 'Support / Queries';
-        $this->render('admin/support', [
-            'pageTitle' => $pageTitle
-        ]);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        $userId = $_POST['user_id'] ?? null;
+        $status = $_POST['status'] ?? null;
+        $reason = $_POST['reason'] ?? null;
+        $reasonCode = $_POST['reason_code'] ?? null; // New field
+        $evidence = $_POST['evidence'] ?? null; // New field
+        $duration = $_POST['duration'] ?? null; // in days
+
+        if (!$userId || !$status) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Missing required fields']);
+            exit;
+        }
+
+        // Validate status
+        $allowedStatuses = [USER_STATUS_ACTIVE, USER_STATUS_SUSPENDED, USER_STATUS_DEACTIVATED];
+        if (!in_array($status, $allowedStatuses)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid status']);
+            exit;
+        }
+
+        // Get current user data for old status
+        $currentUser = $this->userModel->find($userId);
+        if (!$currentUser) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'User not found']);
+            exit;
+        }
+        $oldStatus = $currentUser['status'];
+
+        $updateData = ['status' => $status];
+
+        if ($status === USER_STATUS_SUSPENDED) {
+            // Require reason for suspension
+            if (empty($reason)) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Suspension reason is required']);
+                exit;
+            }
+            
+            $updateData['suspension_reason'] = $reason;
+            if ($duration) {
+                $updateData['suspension_end_date'] = date('Y-m-d H:i:s', strtotime("+$duration days"));
+            } else {
+                $updateData['suspension_end_date'] = null; // Indefinite
+            }
+        } elseif ($status === USER_STATUS_ACTIVE || $status === USER_STATUS_DEACTIVATED) {
+            $updateData['suspension_reason'] = null;
+            $updateData['suspension_end_date'] = null;
+        }
+
+        if ($this->userModel->update($userId, $updateData)) {
+            // Record status history
+            // Only if status changed or it's a suspension update (to record new notes/evidence)
+            $historyAdded = false;
+            if ($oldStatus !== $status || $status === USER_STATUS_SUSPENDED) {
+                $historyAdded = $this->userModel->addStatusHistory([
+                    'user_id' => $userId,
+                    'old_status' => $oldStatus,
+                    'new_status' => $status,
+                    'reason_code' => $reasonCode,
+                    'reason_text' => $reason,
+                    'suspended_by_admin_id' => Session::getUserId(),
+                    'evidence_reference' => $evidence
+                ]);
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Customer status updated successfully',
+                'debug_history_added' => $historyAdded,
+                'debug_old_status' => $oldStatus,
+                'debug_new_status' => $status
+            ]);
+        } else {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Failed to update customer status']);
+        }
+        exit;
     }
 
     /**
-     * Support Tickets / Queries
+     * Get Customer History (AJAX)
      */
-    public function supportTickets()
+    public function customerHistory()
     {
-        // For now, show a placeholder page
-        // This can be enhanced later with a support ticket system
-        $pageTitle = 'Support Tickets / Queries';
-        $this->render('admin/support/tickets', [
-            'pageTitle' => $pageTitle
-        ]);
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            exit;
+        }
+
+        $userId = $_GET['user_id'] ?? null;
+        if (!$userId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing user ID']);
+            exit;
+        }
+
+        $history = $this->userModel->getStatusHistory($userId);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'history' => $history]);
+        exit;
     }
 
     /**
-     * Live Chat Support
+     * Support Ticket Management Routing
      */
-    public function supportChat()
+    public function support($action = 'index', $id = null)
     {
-        // For now, show a placeholder page
-        // This can be enhanced later with a live chat system
-        $pageTitle = 'Live Chat Support';
-        $this->render('admin/support/chat', [
-            'pageTitle' => $pageTitle
-        ]);
-    }
-
-    /**
-     * Dispute Management
-     */
-    public function supportDisputes()
-    {
-        // For now, show a placeholder page
-        // This can be enhanced later with a dispute management system
-        $pageTitle = 'Dispute Management';
-        $this->render('admin/support/disputes', [
-            'pageTitle' => $pageTitle
-        ]);
+        require_once APP_PATH . '/controllers/admin/SupportController.php';
+        $controller = new AdminSupportController();
+        
+        if (method_exists($controller, $action)) {
+            $controller->$action($id);
+        } else {
+            $controller->index();
+        }
     }
 
     /**

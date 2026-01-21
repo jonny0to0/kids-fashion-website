@@ -50,6 +50,11 @@ class ReviewsController extends Controller
                 throw new Exception('You must be logged in to submit a review.');
             }
 
+            // Check if user is suspended
+            if (Session::get('user_status') === USER_STATUS_SUSPENDED) {
+                throw new Exception('Your account is suspended. You cannot submit reviews.');
+            }
+
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('Invalid request method');
             }

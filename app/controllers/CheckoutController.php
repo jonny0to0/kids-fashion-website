@@ -24,6 +24,13 @@ class CheckoutController {
             header('Location: ' . SITE_URL . '/user/login');
             exit;
         }
+
+        // Check if user is suspended
+        if (Session::get('user_status') === USER_STATUS_SUSPENDED) {
+            Session::setFlash('error', 'Your account is suspended. You cannot checkout at this time.');
+            header('Location: ' . SITE_URL . '/cart');
+            exit;
+        }
         
         $userId = Session::getUserId();
         $cart = $this->cartModel->getOrCreateCart($userId, null);
@@ -55,6 +62,13 @@ class CheckoutController {
         
         if (!Session::isLoggedIn()) {
             header('Location: ' . SITE_URL . '/user/login');
+            exit;
+        }
+
+        // Check if user is suspended
+        if (Session::get('user_status') === USER_STATUS_SUSPENDED) {
+            Session::setFlash('error', 'Your account is suspended. You cannot place orders at this time.');
+            header('Location: ' . SITE_URL . '/cart');
             exit;
         }
         
