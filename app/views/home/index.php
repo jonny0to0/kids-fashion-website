@@ -73,7 +73,8 @@ $productModel = new Product();
                                  alt="<?php echo htmlspecialchars($banner['title'] ?? 'Banner'); ?>"
                                  class="w-full h-full object-cover object-center"
                                  <?php echo $index === 0 ? '' : 'loading="lazy"'; ?>
-                                 fetchpriority="<?php echo $index === 0 ? 'high' : 'low'; ?>">
+                                 fetchpriority="<?php echo $index === 0 ? 'high' : 'low'; ?>"
+                                 onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
                         </picture>
                     <?php endif; ?>
                     
@@ -179,12 +180,13 @@ $productModel = new Product();
                                     <?php 
                                     $categoryImage = !empty($category['image']) 
                                         ? SITE_URL . $category['image']
-                                        : SITE_URL . '/assets/images/placeholder.jpg';
+                                        : SITE_URL . '/assets/images/no-image.png';
                                     ?>
                                     <img src="<?php echo $categoryImage; ?>" 
                                          alt="<?php echo htmlspecialchars($category['name']); ?>"
                                          class="category-image rounded-full w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 object-cover border-4 border-gray-100 group-hover:border-pink-300 transition-all duration-300 shadow-md group-hover:shadow-lg transform group-hover:scale-105"
-                                         loading="lazy">
+                                         loading="lazy"
+                                         onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
                                 </div>
                                 <div class="category-name text-center">
                                     <h3 class="text-xs md:text-sm font-semibold text-gray-800 group-hover:text-pink-600 transition-colors duration-300 line-clamp-2 max-w-[100px] md:max-w-[120px]">
@@ -202,7 +204,7 @@ $productModel = new Product();
                                     <?php 
                                     $categoryImage = !empty($category['image']) 
                                         ? SITE_URL . $category['image']
-                                        : SITE_URL . '/assets/images/placeholder.jpg';
+                                        : SITE_URL . '/assets/images/no-image.png';
                                     ?>
                                     <img src="<?php echo $categoryImage; ?>" 
                                          alt="<?php echo htmlspecialchars($category['name']); ?>"
@@ -269,7 +271,7 @@ $productModel = new Product();
             <h2 class="text-3xl md:text-4xl font-bold mb-2 text-gray-800">Best Deals</h2>
             <p class="text-gray-600">Don't miss out on these amazing offers!</p>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <?php foreach ($bestDeals as $product): ?>
                 <?php include VIEW_PATH . '/products/_product_card.php'; ?>
             <?php endforeach; ?>
@@ -291,7 +293,7 @@ $productModel = new Product();
             <h2 class="text-3xl md:text-4xl font-bold mb-2 text-gray-800">Top Selling Products</h2>
             <p class="text-gray-600">Our customers' favorites</p>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <?php foreach ($topSelling as $product): ?>
                 <?php include VIEW_PATH . '/products/_product_card.php'; ?>
             <?php endforeach; ?>
@@ -310,7 +312,7 @@ $productModel = new Product();
 <section class="py-12 bg-gray-100">
     <div class="container mx-auto px-4">
         <h2 class="text-3xl font-bold mb-8 text-center">Featured Products</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <?php foreach ($featuredProducts as $product): ?>
                 <?php include VIEW_PATH . '/products/_product_card.php'; ?>
             <?php endforeach; ?>

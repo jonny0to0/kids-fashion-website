@@ -34,7 +34,7 @@ $getValue = function($key, $default = '') use ($settings, $settingsModel) {
         <!-- Logo Type Selection -->
         <div class="mb-6">
             <label class="block text-sm font-medium text-gray-700 mb-3">Logo Type</label>
-            <div class="flex gap-4">
+            <div class="flex flex-col sm:flex-row gap-4">
                 <label class="flex items-center cursor-pointer">
                     <input type="radio" name="settings[logo_type]" value="image" 
                            <?php echo $getValue('logo_type', 'text') === 'image' ? 'checked' : ''; ?>
@@ -118,7 +118,7 @@ $getValue = function($key, $default = '') use ($settings, $settingsModel) {
             </div>
             
             <!-- Dimension Controls -->
-            <div class="grid grid-cols-2 gap-4 mt-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Display Height (px)
@@ -190,7 +190,7 @@ $getValue = function($key, $default = '') use ($settings, $settingsModel) {
             </div>
             
             <!-- Font Settings -->
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Font Size - Sidebar (px)
@@ -216,7 +216,7 @@ $getValue = function($key, $default = '') use ($settings, $settingsModel) {
                 </div>
             </div>
             
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Font Weight

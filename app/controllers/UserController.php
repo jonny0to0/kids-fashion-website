@@ -126,6 +126,17 @@ class UserController
                 } else {
                     Session::setFlash('success', 'Welcome back! You have successfully logged in.');
                 }
+
+                // Trigger Login Event
+                if (file_exists(APP_PATH . '/services/EventService.php')) {
+                    require_once APP_PATH . '/services/EventService.php';
+                    (new EventService())->dispatch(EventService::EVENT_USER_LOGIN, [
+                        'user_id' => $user['user_id'],
+                        'user_name' => $user['first_name'] . ' ' . $user['last_name'],
+                        'related_id' => $user['user_id']
+                    ]);
+                }
+
                 header('Location: ' . $redirect);
                 exit;
             } else {
@@ -270,6 +281,16 @@ class UserController
                     header('Location: ' . $redirect);
                     exit;
                 } else {
+                    // Trigger Registration Event
+                    if (file_exists(APP_PATH . '/services/EventService.php')) {
+                        require_once APP_PATH . '/services/EventService.php';
+                        (new EventService())->dispatch(EventService::EVENT_USER_REGISTERED, [
+                            'user_id' => $user['user_id'],
+                            'user_name' => $user['first_name'] . ' ' . $user['last_name'],
+                            'related_id' => $user['user_id']
+                        ]);
+                    }
+
                     Session::setFlash('success', 'Registration successful! Please login.');
                     header('Location: ' . SITE_URL . '/user/login');
                     exit;
@@ -514,7 +535,53 @@ class UserController
         } else {
             // Return JSON for AJAX requests
             header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'form' => $this->getAddressFormHtml()]);
+            // Check if we are editing (get address_id from GET)
+            $addressId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+            $address = null;
+            
+            if ($addressId) {
+                $addressModel = new Address();
+                $userId = Session::getUserId();
+                if ($addressModel->belongsToUser($addressId, $userId)) {
+                    $address = $addressModel->find($addressId);
+                }
+            }
+            
+            echo json_encode(['success' => true, 'form' => $this->getAddressFormHtml($address)]);
+        }
+    }
+
+    /**
+     * Delete address (AJAX endpoint)
+     */
+    public function addressDelete()
+    {
+        $this->requireAuth();
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
+        }
+
+        $addressId = (int)($_POST['address_id'] ?? 0);
+        if (!$addressId) {
+            echo json_encode(['success' => false, 'message' => 'Address ID required']);
+            exit;
+        }
+
+        $userId = Session::getUserId();
+        $addressModel = new Address();
+
+        if (!$addressModel->belongsToUser($addressId, $userId)) {
+            echo json_encode(['success' => false, 'message' => 'Address not found or access denied']);
+            exit;
+        }
+
+        if ($addressModel->delete($addressId)) {
+            echo json_encode(['success' => true, 'message' => 'Address deleted successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to delete address']);
         }
     }
 
@@ -584,14 +651,39 @@ class UserController
             $addressModel->query("UPDATE addresses SET is_default = 0 WHERE user_id = ?", [$userId]);
         }
 
-        $addressId = $addressModel->create($data);
-
+        $addressId = isset($_POST['address_id']) ? (int)$_POST['address_id'] : 0;
+        $result = false;
+        
         if ($addressId) {
+            // Update existing
+            if (!$addressModel->belongsToUser($addressId, $userId)) {
+                echo json_encode(['success' => false, 'message' => 'Permission denied']);
+                return;
+            }
+            $result = $addressModel->update($addressId, $data);
+        } else {
+            // Create new
+            $result = $addressModel->create($data);
+            $addressId = $result; 
+        }
+
+        if ($result) {
             echo json_encode([
                 'success' => true,
-                'message' => 'Address added successfully',
+                'message' => 'Address saved successfully',
                 'address_id' => $addressId
             ]);
+
+            // Trigger Address Update Event
+             if (file_exists(APP_PATH . '/services/EventService.php')) {
+                require_once APP_PATH . '/services/EventService.php';
+                (new EventService())->dispatch(EventService::EVENT_ADDRESS_UPDATED, [
+                    'user_id' => $userId,
+                    'user_name' => Session::get('user_name'),
+                    'related_id' => $userId
+                ]);
+            }
+
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to save address. Please try again.']);
         }
@@ -600,19 +692,43 @@ class UserController
     /**
      * Get address form HTML
      */
-    private function getAddressFormHtml()
+    private function getAddressFormHtml($address = null)
     {
-        // Get user profile data to pre-populate form
+        // Get user profile data to pre-populate form if no address provided
         $userId = Session::getUserId();
         $user = $this->userModel->find($userId);
 
-        // Combine first name and last name for full name
-        $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-        $phone = $user['phone'] ?? '';
+        if ($address) {
+            // Editing existing address
+            $fullName = $address['full_name'] ?? '';
+            $phone = $address['phone'] ?? '';
+            $addressType = $address['address_type'] ?? 'home';
+            $addressLine1 = $address['address_line1'] ?? '';
+            $city = $address['city'] ?? '';
+            $state = $address['state'] ?? '';
+            $pincode = $address['pincode'] ?? '';
+            $isDefault = $address['is_default'] ?? 0;
+            $addressId = $address['address_id'] ?? 0;
+        } else {
+            // New address
+            $fullName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            $phone = $user['phone'] ?? '';
+            $addressType = 'home';
+            $addressLine1 = '';
+            $city = '';
+            $state = '';
+            $pincode = '';
+            $isDefault = false;
+            $addressId = 0;
+        }
 
         ob_start();
         ?>
         <form id="address-form" class="space-y-4">
+            <?php if ($addressId): ?>
+                <input type="hidden" name="address_id" value="<?php echo $addressId; ?>">
+            <?php endif; ?>
+            
             <div>
                 <label class="block text-gray-700 font-medium mb-2">Full Name <span class="text-red-500">*</span></label>
                 <input type="text" name="full_name" required value="<?php echo htmlspecialchars($fullName); ?>"
@@ -631,15 +747,15 @@ class UserController
                 <label class="block text-gray-700 font-medium mb-2">Address Type</label>
                 <select name="address_type"
                     class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500">
-                    <option value="home">Home</option>
-                    <option value="work">Work</option>
-                    <option value="other">Other</option>
+                    <option value="home" <?php echo $addressType === 'home' ? 'selected' : ''; ?>>Home</option>
+                    <option value="work" <?php echo $addressType === 'work' ? 'selected' : ''; ?>>Work</option>
+                    <option value="other" <?php echo $addressType === 'other' ? 'selected' : ''; ?>>Other</option>
                 </select>
             </div>
 
             <div>
                 <label class="block text-gray-700 font-medium mb-2">Address Line 1 <span class="text-red-500">*</span></label>
-                <input type="text" name="address_line1" required
+                <input type="text" name="address_line1" required value="<?php echo htmlspecialchars($addressLine1); ?>"
                     class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
                     placeholder="House/Flat No., Building Name">
             </div>
@@ -647,14 +763,14 @@ class UserController
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-gray-700 font-medium mb-2">City <span class="text-red-500">*</span></label>
-                    <input type="text" name="city" required
+                    <input type="text" name="city" required value="<?php echo htmlspecialchars($city); ?>"
                         class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
                         placeholder="City">
                 </div>
 
                 <div>
                     <label class="block text-gray-700 font-medium mb-2">State <span class="text-red-500">*</span></label>
-                    <input type="text" name="state" required
+                    <input type="text" name="state" required value="<?php echo htmlspecialchars($state); ?>"
                         class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
                         placeholder="State">
                 </div>
@@ -663,7 +779,7 @@ class UserController
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-gray-700 font-medium mb-2">Pincode <span class="text-red-500">*</span></label>
-                    <input type="text" name="pincode" required pattern="[0-9]{6}"
+                    <input type="text" name="pincode" required pattern="[0-9]{6}" value="<?php echo htmlspecialchars($pincode); ?>"
                         class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"
                         placeholder="6-digit pincode">
                 </div>
@@ -676,7 +792,7 @@ class UserController
             </div>
 
             <div class="flex items-center">
-                <input type="checkbox" name="is_default" id="is_default" class="mr-2">
+                <input type="checkbox" name="is_default" id="is_default" class="mr-2" <?php echo $isDefault ? 'checked' : ''; ?>>
                 <label for="is_default" class="text-gray-700">Set as default address</label>
             </div>
 

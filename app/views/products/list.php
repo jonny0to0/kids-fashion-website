@@ -52,7 +52,7 @@
             
             <!-- Products -->
             <?php if (!empty($products)): ?>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     <?php foreach ($products as $product): ?>
                         <?php include VIEW_PATH . '/products/_product_card.php'; ?>
                     <?php endforeach; ?>

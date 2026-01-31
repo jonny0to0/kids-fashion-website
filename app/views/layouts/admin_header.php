@@ -262,6 +262,37 @@
             background: #94a3b8;
         }
 
+        /* Admin Sidebar Scrollbar - Specific Overrides */
+        .admin-sidebar-nav {
+            scroll-behavior: smooth;
+            overflow-y: auto;
+            /* Firefox */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        .admin-sidebar-nav::-webkit-scrollbar {
+            width: 5px; /* Thinner than default */
+        }
+
+        .admin-sidebar-nav::-webkit-scrollbar-track {
+            background: transparent; /* Seamless look */
+        }
+
+        .admin-sidebar-nav::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+        }
+
+        /* Show scrollbar on hover with higher contrast */
+        .admin-sidebar-nav:hover {
+            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+
+        .admin-sidebar-nav:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
         /* Card styles */
         .admin-card {
             background: white;
@@ -480,7 +511,7 @@
             </div>
 
             <!-- Navigation Menu -->
-            <nav class="py-4 overflow-y-auto" style="max-height: calc(100vh - 80px);">
+            <nav class="py-4 overflow-y-auto admin-sidebar-nav" style="max-height: calc(100vh - 80px);">
                 <!-- 1. Dashboard -->
                 <div>
                     <div class="sidebar-menu-item <?php echo ($isDashboard || $isDashboardOverview || $isDashboardInsights || $isDashboardAnalytics) ? 'active' : ''; ?>"
@@ -919,7 +950,7 @@
                     </button>
 
                     <!-- Page Title -->
-                    <h1 class="text-xl md:text-2xl font-bold text-gray-800">
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-800 hidden md:block">
                         <?php echo isset($pageTitle) ? $pageTitle : 'Dashboard'; ?>
                     </h1>
 
@@ -939,14 +970,45 @@
                         </div>
 
                         <!-- Notification Icon -->
-                        <button class="relative text-gray-600 hover:text-gray-900 p-2">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
-                                </path>
-                            </svg>
-                            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
+                        <!-- Notification Icon -->
+                        <div class="relative" data-notification-container>
+                             <?php
+                            // Fetch unread notifications count
+                            // We can use the Notification model directly here since this is a layout file
+                            $unreadCount = 0;
+                            if (class_exists('Notification') && Session::isLoggedIn()) {
+                                $notificationModel = new Notification();
+                                $unreadCount = $notificationModel->getUnreadCount(Session::getUserId());
+                            }
+                            ?>
+                            <button data-notification-toggle class="relative text-gray-600 hover:text-gray-900 p-2">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+                                    </path>
+                                </svg>
+                                <!-- Notification Red Dot -->
+                                <span data-notification-badge class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white <?php echo $unreadCount > 0 ? '' : 'hidden'; ?>"></span>
+                            </button>
+
+                            <!-- Notification Dropdown -->
+                            <div data-notification-dropdown
+                                class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-100 z-50 overflow-hidden">
+                                <div class="p-3 border-b border-gray-50 flex justify-between items-center bg-gray-50">
+                                    <h3 class="font-semibold text-gray-700 text-sm">Notifications</h3>
+                                    <button id="mark-all-read" class="text-xs text-pink-600 hover:text-pink-700 font-medium disabled:opacity-50">Mark all read</button>
+                                </div>
+                                <div id="notification-list" class="max-h-80 overflow-y-auto">
+                                    <div class="p-4 text-center text-gray-500 text-sm">
+                                        Loading...
+                                    </div>
+                                </div>
+                                <div class="p-2 border-t border-gray-50 bg-gray-50 text-center">
+                                    <a href="<?php echo SITE_URL; ?>/admin/notifications"
+                                        class="text-xs text-pink-600 font-semibold hover:text-pink-700 block w-full py-1">View All Notifications</a>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Admin Profile -->
                         <div class="relative">
@@ -977,6 +1039,129 @@
                     </div>
                 </div>
             </header>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const toggle = document.querySelector('[data-notification-toggle]');
+                        const dropdown = document.querySelector('[data-notification-dropdown]');
+                        const list = document.getElementById('notification-list');
+                        const badge = document.querySelector('[data-notification-badge]');
+                        const markAllBtn = document.getElementById('mark-all-read');
+                        let isOpen = false;
+
+                        if (!toggle || !dropdown) return;
+
+                        // Toggle dropdown
+                        toggle.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            isOpen = !isOpen;
+                            if (isOpen) {
+                                dropdown.classList.remove('hidden');
+                                fetchNotifications();
+                            } else {
+                                dropdown.classList.add('hidden');
+                            }
+                        });
+
+                        // Close when clicking outside
+                        document.addEventListener('click', function(e) {
+                            if (isOpen && !dropdown.contains(e.target) && !toggle.contains(e.target)) {
+                                isOpen = false;
+                                dropdown.classList.add('hidden');
+                            }
+                        });
+
+                        // Fetch notifications
+                        function fetchNotifications() {
+                            fetch('<?php echo SITE_URL; ?>/admin/notifications-latest')
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        updateBadge(data.unread_count);
+                                        renderList(data.notifications);
+                                    }
+                                })
+                                .catch(err => console.error('Error fetching notifications:', err));
+                        }
+
+                        // Update Badge
+                        function updateBadge(count) {
+                            if (!badge) return;
+                            if (count > 0) {
+                                badge.classList.remove('hidden');
+                            } else {
+                                badge.classList.add('hidden');
+                            }
+                        }
+
+                        // Render List
+                        function renderList(notifications) {
+                            if (!list) return;
+                            
+                            if (!notifications || notifications.length === 0) {
+                                list.innerHTML = `
+                                    <div class="p-4 text-center text-gray-500 text-sm flex flex-col items-center">
+                                        <svg class="w-8 h-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                                        </svg>
+                                        No new notifications
+                                    </div>`;
+                                return;
+                            }
+
+                            const html = notifications.map(n => {
+                                const isRead = parseInt(n.is_read) === 1;
+                                const bgClass = isRead ? 'bg-white' : 'bg-blue-50';
+                                // Format date safely
+                                const date = new Date(n.created_at).toLocaleDateString(undefined, {
+                                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                });
+                                
+                                return `
+                                    <div class="p-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${bgClass} group relative" onclick="window.location.href='<?php echo SITE_URL; ?>/admin/notifications-click/${n.notification_id}'">
+                                        <div class="flex justify-between items-start mb-1">
+                                            <h4 class="text-sm font-medium text-gray-800 line-clamp-1">${n.title}</h4>
+                                            <span class="text-xs text-gray-400 whitespace-nowrap ml-2">${date}</span>
+                                        </div>
+                                        <p class="text-xs text-gray-600 line-clamp-2">${n.message}</p>
+                                        ${!isRead ? `<span class="absolute top-3 right-2 w-2 h-2 bg-blue-500 rounded-full"></span>` : ''}
+                                    </div>
+                                `;
+                            }).join('');
+
+                            list.innerHTML = html;
+                        }
+
+                        // Mark all as read
+                        if (markAllBtn) {
+                            markAllBtn.addEventListener('click', function() {
+                                fetch('<?php echo SITE_URL; ?>/admin/notifications-mark-all-read', {
+                                    method: 'POST'
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        updateBadge(0);
+                                        fetchNotifications(); // Refresh list to show read state
+                                        // Optional: Toast notification
+                                        if (typeof Swal !== 'undefined') {
+                                            const Toast = Swal.mixin({
+                                                toast: true,
+                                                position: 'top-end',
+                                                showConfirmButton: false,
+                                                timer: 3000
+                                            });
+                                            Toast.fire({
+                                                icon: 'success',
+                                                title: 'All notifications marked as read'
+                                            });
+                                        }
+                                    }
+                                });
+                            });
+                        }
+                    });
+                </script>
 
             <!-- Page Content -->
             <main class="p-2 md:p-6" style="width: 100%; box-sizing: border-box;">

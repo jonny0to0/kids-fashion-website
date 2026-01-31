@@ -9,6 +9,16 @@
     <p class="text-gray-600 mt-1">View all customer reviews and feedback</p>
 </div>
 
+<?php
+require_once __DIR__ . '/../_breadcrumb.php';
+
+renderBreadcrumb([
+    ['label' => 'Home', 'url' => '/admin'],
+    ['label' => 'Customers', 'url' => '/admin/customers'],
+    ['label' => 'Reviews & Feedback']
+]);
+?>
+
 <!-- Filters -->
 <div class="admin-card mb-6">
     <form method="GET" action="<?php echo SITE_URL; ?>/admin/customers/reviews" class="flex flex-wrap gap-4 items-end">
@@ -31,16 +41,6 @@
 
 <!-- Reviews Table -->
 <div class="admin-card">
-<?php
-require_once __DIR__ . '/../_breadcrumb.php';
-
-renderBreadcrumb([
-    ['label' => 'Home', 'url' => '/admin'],
-    ['label' => 'Customers', 'url' => '/admin/customers'],
-    ['label' => 'Reviews & Feedback']
-]);
-?>
-
     <?php if (empty($reviews)): ?>
         <div class="text-center py-12">
             <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

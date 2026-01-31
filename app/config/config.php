@@ -63,7 +63,7 @@ define('RAZORPAY_KEY_ID', '');
 define('RAZORPAY_KEY_SECRET', '');
 
 // Image Paths
-define('PRODUCT_IMAGE_PATH', '/assets/images/products/');
+define('PRODUCT_IMAGE_PATH', '/assets/uploads/products/');
 define('CATEGORY_IMAGE_PATH', '/assets/images/categories/');
 define('BANNER_IMAGE_PATH', '/assets/images/banners/');
 define('AVATAR_IMAGE_PATH', '/assets/images/avatars/');

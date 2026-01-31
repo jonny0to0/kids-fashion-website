@@ -122,7 +122,7 @@ renderBreadcrumb([
                                     <?php else: ?>
                                         <button onclick="openSuspendModal('<?php echo $customer['user_id']; ?>')" class="text-orange-600 hover:text-orange-900">Suspend</button>
                                     <?php endif; ?>
-                                    <button onclick='openDetailsModal(<?php echo json_encode($customer); ?>)' class="text-indigo-600 hover:text-indigo-900">Details</button>
+                                    <button id="btn-details-<?php echo $customer['user_id']; ?>" onclick='openDetailsModal(<?php echo json_encode($customer); ?>)' class="text-indigo-600 hover:text-indigo-900">Details</button>
                                 </div>
                             </td>
                         </tr>
@@ -215,7 +215,7 @@ renderBreadcrumb([
 </div>
 
 <!-- Customer Details Modal -->
-<div id="detailsModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="detailsModal" class="hidden fixed inset-0 z-[9999] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <!-- Background overlay -->
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeDetailsModal()"></div>
@@ -615,6 +615,24 @@ document.getElementById('suspendForm').addEventListener('submit', function(e) {
             text: 'An error occurred: ' + error.message
         });
     });
+});
+
+// Auto-open modal if customer_id URL param exists
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const customerId = urlParams.get('customer_id');
+    
+    if (customerId) {
+        const btn = document.getElementById('btn-details-' + customerId);
+        if (btn) {
+            btn.click();
+            
+            // Clean URL without reload
+            const newUrl = window.location.pathname; // Remove query params
+            // actually we might want to keep other params? But for now clean is fine or just keep it.
+            // keeping it is fine so refresh works same way.
+        }
+    }
 });
 </script>
 

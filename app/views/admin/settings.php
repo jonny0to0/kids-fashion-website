@@ -15,51 +15,80 @@ $sections = [
 ];
 
 $currentSettings = $settingsByGroup[$activeSection] ?? [];
+
+// Include Breadcrumb Component
+require_once __DIR__ . '/_breadcrumb.php';
+
+// Generate breadcrumbs
+$breadcrumbs = [
+    ['label' => 'Home', 'url' => '/admin'],
+    ['label' => 'Settings', 'url' => '/admin/settings']
+];
+
+// Add section breadcrumb
+if (empty($activeSubsection)) {
+    $breadcrumbs[] = ['label' => $sections[$activeSection]['name'] ?? 'Settings'];
+} else {
+    $breadcrumbs[] = ['label' => $sections[$activeSection]['name'] ?? 'Settings', 'url' => '/admin/settings?section=' . $activeSection];
+    
+    // Add subsection breadcrumb
+    $subsectionLabel = ucfirst($activeSubsection);
+    if ($activeSection === 'shipping') {
+        if ($activeSubsection === 'zones') $subsectionLabel = 'Shipping Zones';
+        if ($activeSubsection === 'delivery') $subsectionLabel = 'Delivery Configuration';
+    }
+    $breadcrumbs[] = ['label' => $subsectionLabel];
+}
 ?>
 
 <div>
     <!-- Content Area -->
     <div class="w-full">
+        <!-- Add Breadcrumb -->
+        <?php renderBreadcrumb($breadcrumbs); ?>
+
         <div class="admin-card">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-2xl font-bold text-gray-800"><?php echo $sections[$activeSection]['name'] ?? 'Settings'; ?></h2>
             </div>
             
-            <form id="settings-form-<?php echo $activeSection; ?>" class="settings-form" data-group="<?php echo $activeSection; ?>" enctype="multipart/form-data">
-                <?php if ($activeSection === 'general'): ?>
-                    <?php include 'settings/sections/general.php'; ?>
-                <?php elseif ($activeSection === 'store'): ?>
-                    <?php include 'settings/sections/store.php'; ?>
-                <?php elseif ($activeSection === 'payment'): ?>
-                    <?php include 'settings/sections/payment.php'; ?>
-                <?php elseif ($activeSection === 'shipping'): ?>
-                    <?php include 'settings/sections/shipping.php'; ?>
-                <?php elseif ($activeSection === 'tax'): ?>
-                    <?php include 'settings/sections/tax.php'; ?>
-                <?php elseif ($activeSection === 'notification'): ?>
-                    <?php include 'settings/sections/notification.php'; ?>
-                <?php elseif ($activeSection === 'seo'): ?>
-                    <?php include 'settings/sections/seo.php'; ?>
-                <?php elseif ($activeSection === 'security'): ?>
-                    <?php include 'settings/sections/security.php'; ?>
-                <?php elseif ($activeSection === 'integration'): ?>
-                    <?php include 'settings/sections/integration.php'; ?>
-                <?php elseif ($activeSection === 'maintenance'): ?>
-                    <?php include 'settings/sections/maintenance.php'; ?>
-                <?php elseif ($activeSection === 'backup'): ?>
-                    <?php include 'settings/sections/backup.php'; ?>
-                <?php endif; ?>
-                
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <button type="submit" class="btn-pink-gradient px-6 py-2.5 rounded-lg font-medium">
-                        <span class="save-text">Save Changes</span>
-                        <span class="save-loading hidden">Saving...</span>
-                    </button>
-                    <button type="button" class="ml-3 px-6 py-2.5 rounded-lg font-medium border border-gray-300 text-gray-700 hover:bg-gray-50" onclick="location.reload()">
-                        Cancel
-                    </button>
-                </div>
-            </form>
+            <?php if ($activeSection === 'shipping'): ?>
+                <?php include 'settings/sections/shipping.php'; ?>
+            <?php else: ?>
+                <form id="settings-form-<?php echo $activeSection; ?>" class="settings-form" data-group="<?php echo $activeSection; ?>" enctype="multipart/form-data">
+                    <?php if ($activeSection === 'general'): ?>
+                        <?php include 'settings/sections/general.php'; ?>
+                    <?php elseif ($activeSection === 'store'): ?>
+                        <?php include 'settings/sections/store.php'; ?>
+                    <?php elseif ($activeSection === 'payment'): ?>
+                        <?php include 'settings/sections/payment.php'; ?>
+                    <?php elseif ($activeSection === 'tax'): ?>
+                        <?php include 'settings/sections/tax.php'; ?>
+                    <?php elseif ($activeSection === 'notification'): ?>
+                        <?php include 'settings/sections/notification.php'; ?>
+                    <?php elseif ($activeSection === 'seo'): ?>
+                        <?php include 'settings/sections/seo.php'; ?>
+                    <?php elseif ($activeSection === 'security'): ?>
+                        <?php include 'settings/sections/security.php'; ?>
+                    <?php elseif ($activeSection === 'integration'): ?>
+                        <?php include 'settings/sections/integration.php'; ?>
+                    <?php elseif ($activeSection === 'maintenance'): ?>
+                        <?php include 'settings/sections/maintenance.php'; ?>
+                    <?php elseif ($activeSection === 'backup'): ?>
+                        <?php include 'settings/sections/backup.php'; ?>
+                    <?php endif; ?>
+                    
+                    <div class="mt-6 pt-6 border-t border-gray-200 flex flex-col md:flex-row">
+                        <button type="submit" class="btn-pink-gradient px-6 py-2.5 rounded-lg font-medium w-full md:w-auto mb-3 md:mb-0">
+                            <span class="save-text">Save Changes</span>
+                            <span class="save-loading hidden">Saving...</span>
+                        </button>
+                        <button type="button" class="px-6 py-2.5 rounded-lg font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 w-full md:w-auto md:ml-3" onclick="location.reload()">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            <?php endif; ?>
         </div>
     </div>
 </div>

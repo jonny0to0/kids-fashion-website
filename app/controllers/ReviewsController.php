@@ -112,7 +112,8 @@ class ReviewsController extends Controller
                 'is_verified_purchase' => 1
             ];
 
-            if ($this->reviewModel->submitReview($data)) {
+            $newReviewId = $this->reviewModel->submitReview($data);
+            if ($newReviewId) {
                 $msg = 'Thank you! Your review has been submitted for approval.';
                 if ($isJson) {
                     header('Content-Type: application/json');
@@ -120,6 +121,19 @@ class ReviewsController extends Controller
                     exit;
                 }
                 Session::setFlash('success', $msg);
+
+                // Trigger Review Submitted Event
+                if (file_exists(APP_PATH . '/services/EventService.php')) {
+                    require_once APP_PATH . '/services/EventService.php';
+                    $product = (new Product())->find($productId); // Fetch product for name
+                    (new EventService())->dispatch(EventService::EVENT_REVIEW_SUBMITTED, [
+                        'user_id' => $userId,
+                        'user_name' => Session::get('user_name'),
+                        'product_name' => $product['name'] ?? 'Product #' . $productId,
+                        'rating' => (int) $rating,
+                        'related_id' => $newReviewId
+                    ]);
+                }
             } else {
                 throw new Exception('Failed to submit review. Please try again.');
             }

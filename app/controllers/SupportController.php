@@ -7,6 +7,7 @@ class SupportController {
     private $messageModel;
     private $userModel;
     private $settingsModel;
+    private $eventService;
 
     public function __construct() {
         if (!Session::isLoggedIn()) {
@@ -23,6 +24,9 @@ class SupportController {
         $this->messageModel = new SupportMessage();
         $this->userModel = new User();
         $this->settingsModel = new Settings();
+
+        require_once APP_PATH . '/services/EventService.php';
+        $this->eventService = new EventService();
     }
     
     public function index() {
@@ -108,6 +112,14 @@ class SupportController {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             $this->messageModel->create($msgData);
+            
+            // Dispatch Event
+            $this->eventService->dispatch(EventService::EVENT_TICKET_CREATED, [
+                'related_id' => $ticketId,
+                'subject' => $subject,
+                'user_id' => Session::getUserId(),
+                'user_name' => Session::get('user_name')
+            ]);
             
             Session::setFlash('success', 'Support ticket created successfully. Ticket ID: #' . $ticketId);
             header('Location: ' . SITE_URL . '/support/view/' . $ticketId);

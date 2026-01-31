@@ -4,7 +4,7 @@
  * 
  * Usage:
  *   renderBreadcrumb([
- *       ['label' => 'Dashboard', 'url' => '/admin'],
+ *       ['label' => 'Home', 'url' => '/admin'],
  *       ['label' => 'Categories', 'url' => '/admin/categories'],
  *       ['label' => 'Edit Category'] // Current page (no URL)
  *   ]);
@@ -17,7 +17,7 @@ function renderBreadcrumb($items) {
     }
     
     echo '<nav class="mb-4" aria-label="Breadcrumb">';
-    echo '<ol class="flex items-center space-x-2 text-sm">';
+    echo '<ol class="flex flex-wrap items-center gap-2 text-sm">';
     
     foreach ($items as $index => $item) {
         $isLast = ($index === count($items) - 1);

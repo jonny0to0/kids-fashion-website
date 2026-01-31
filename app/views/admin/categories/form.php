@@ -14,7 +14,7 @@ require_once __DIR__ . '/../_back_button.php';
     <?php
     // Render breadcrumb
     renderBreadcrumb([
-        ['label' => 'Dashboard', 'url' => '/admin'],
+        ['label' => 'Home', 'url' => '/admin'],
         ['label' => 'Categories', 'url' => '/admin/categories'],
         ['label' => $action . ' Category']
     ]);

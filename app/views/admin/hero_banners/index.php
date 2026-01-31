@@ -12,7 +12,7 @@ require_once __DIR__ . '/../_quick_actions.php';
     <?php
     // Render breadcrumb
     renderBreadcrumb([
-        ['label' => 'Dashboard', 'url' => '/admin'],
+        ['label' => 'Home', 'url' => '/admin'],
         ['label' => 'Hero Banners']
     ]);
     ?>

@@ -12,7 +12,7 @@ require_once __DIR__ . '/_quick_actions.php';
     <?php
     // Render breadcrumb
     renderBreadcrumb([
-        ['label' => 'Dashboard', 'url' => '/admin'],
+        ['label' => 'Home', 'url' => '/admin'],
         ['label' => 'Products']
     ]);
     ?>
@@ -94,7 +94,8 @@ require_once __DIR__ . '/_quick_actions.php';
                                 <td class="px-2 py-2 whitespace-nowrap">
                                     <?php if (!empty($product['primary_image'])): ?>
                                         <img src="<?php echo SITE_URL . $product['primary_image']; ?>"
-                                            alt="<?php echo htmlspecialchars($product['name']); ?>" class="w-20 h-20 rounded">
+                                            alt="<?php echo htmlspecialchars($product['name']); ?>" class="w-20 h-20 rounded"
+                                            onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
                                         <!-- object-cover -->
                                     <?php else: ?>
                                         <div class="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
@@ -168,7 +169,8 @@ require_once __DIR__ . '/_quick_actions.php';
                         <div class="flex-shrink-0">
                             <?php if (!empty($product['primary_image'])): ?>
                                 <img src="<?php echo SITE_URL . $product['primary_image']; ?>"
-                                    alt="<?php echo htmlspecialchars($product['name']); ?>" class="w-20 h-20 rounded object-cover">
+                                    alt="<?php echo htmlspecialchars($product['name']); ?>" class="w-20 h-20 rounded object-cover"
+                                    onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
                             <?php else: ?>
                                 <div class="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
                                     <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

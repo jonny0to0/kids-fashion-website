@@ -35,7 +35,8 @@ if (!empty($variants)) {
 sort($sizes); // Sort sizes logically
 ?>
 
-<div class="container mx-auto px-4 py-4 md:py-6 pb-24 lg:pb-8 max-w-7xl">
+<div class="container mx-auto px-4 pb-24 lg:pb-8 max-w-7xl">
+    <!-- py-4 md:py-6 -->
     <!-- Mobile: Product Title (Shown First on Mobile < 1024px) -->
     <div class="lg:hidden mb-4 space-y-2">
         <?php if (!empty($product['brand'])): ?>
@@ -91,7 +92,8 @@ sort($sizes); // Sort sizes logically
                                 <img src="<?php echo SITE_URL . $image['image_url']; ?>"
                                     alt="<?php echo htmlspecialchars($image['alt_text'] ?? $product['name'] . ' - Image ' . ($index + 1)); ?>"
                                     class="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-90"
-                                    loading="<?php echo $index < 4 ? 'eager' : 'lazy'; ?>" width="80" height="80">
+                                    loading="<?php echo $index < 4 ? 'eager' : 'lazy'; ?>" width="80" height="80"
+                                    onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
                             </button>
                         <?php endforeach; ?>
                     </div>
@@ -129,7 +131,8 @@ sort($sizes); // Sort sizes logically
                                             data-zoom-image="<?php echo !empty($images[0]['zoom_image_url']) ? SITE_URL . $images[0]['zoom_image_url'] : ''; ?>"
                                             alt="<?php echo htmlspecialchars($product['name']); ?>"
                                             class="w-full h-full object-contain transition-opacity duration-200 product-zoom-image"
-                                            loading="eager" draggable="false">
+                                            loading="eager" draggable="false"
+                                            onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
                                         <div class="product-zoom-lens hidden absolute pointer-events-none z-20 border border-blue-500 bg-white/20"
                                             id="zoom-lens" style="width: 600px !important; height: 600px !important;"></div>
                                     </div>
@@ -144,7 +147,8 @@ sort($sizes); // Sort sizes logically
                                                     alt="<?php echo htmlspecialchars($product['name']); ?>"
                                                     class="max-w-full max-h-full object-contain p-2"
                                                     onclick="openImageZoomModal()"
-                                                    loading="<?php echo $index === 0 ? 'eager' : 'lazy'; ?>">
+                                                    loading="<?php echo $index === 0 ? 'eager' : 'lazy'; ?>"
+                                                    onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
                                             </div>
                                         <?php endforeach; ?>
                                     </div>
@@ -208,7 +212,8 @@ sort($sizes); // Sort sizes logically
                                             <img src="<?php echo SITE_URL . $image['image_url']; ?>"
                                                 alt="<?php echo htmlspecialchars($image['alt_text'] ?? $product['name'] . ' - Thumbnail ' . ($index + 1)); ?>"
                                                 class="w-full h-full object-cover"
-                                                loading="<?php echo $index < 6 ? 'lazy' : 'lazy'; ?>" width="64" height="64">
+                                                loading="<?php echo $index < 6 ? 'lazy' : 'lazy'; ?>" width="64" height="64"
+                                                onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
                                         </button>
                                     <?php endforeach; ?>
                                 </div>

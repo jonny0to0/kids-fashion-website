@@ -9,7 +9,7 @@ require_once __DIR__ . '/../_breadcrumb.php';
     <?php
     // Render breadcrumb
     renderBreadcrumb([
-        ['label' => 'Dashboard', 'url' => '/admin'],
+        ['label' => 'Home', 'url' => '/admin'],
         ['label' => 'Attribute Groups']
     ]);
     ?>

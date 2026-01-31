@@ -231,7 +231,7 @@ foreach ($revenueTrend as $item) {
     <?php
     // Render breadcrumb
     renderBreadcrumb([
-        ['label' => 'Dashboard', 'url' => '/admin'],
+        ['label' => 'Home', 'url' => '/admin'],
         ['label' => 'Orders']
     ]);
     ?>

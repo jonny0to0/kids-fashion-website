@@ -22,5 +22,9 @@ class Address extends Model {
         // Set this as default
         return $this->update($addressId, ['is_default' => true]);
     }
+    public function belongsToUser($addressId, $userId) {
+        $address = $this->find($addressId);
+        return $address && $address['user_id'] == $userId;
+    }
 }
 

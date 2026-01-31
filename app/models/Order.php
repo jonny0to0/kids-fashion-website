@@ -431,7 +431,10 @@ class Order extends Model
         $result = $this->update($orderId, $data);
 
         if ($result && $oldStatus !== $status) {
-            $this->logStatusChange($orderId, $changedBy, null, null, $oldStatus, $status);
+            // Use current order_status for both old and new, since it didn't change
+            // new_status column is NOT NULL in the database
+            $currentOrderStatus = $order['order_status'];
+            $this->logStatusChange($orderId, $changedBy, $currentOrderStatus, $currentOrderStatus, $oldStatus, $status);
         }
 
         return $result;

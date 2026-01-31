@@ -1,0 +1,22 @@
+-- Add new columns to delivery_methods table
+ALTER TABLE `delivery_methods`
+ADD COLUMN `delivery_type` ENUM('home', 'pickup_point', 'store_pickup', 'courier') DEFAULT 'home',
+ADD COLUMN `courier_partner` VARCHAR(100) DEFAULT NULL,
+ADD COLUMN `description` TEXT,
+ADD COLUMN `pricing_type` ENUM('flat', 'free', 'weight', 'distance', 'price') DEFAULT 'flat',
+ADD COLUMN `cod_charge` DECIMAL(10,2) DEFAULT 0.00,
+ADD COLUMN `fuel_surcharge` DECIMAL(10,2) DEFAULT 0.00,
+ADD COLUMN `is_taxable` TINYINT(1) DEFAULT 0,
+ADD COLUMN `has_slots` TINYINT(1) DEFAULT 0,
+ADD COLUMN `has_same_day` TINYINT(1) DEFAULT 0,
+ADD COLUMN `cutoff_time` TIME DEFAULT NULL,
+ADD COLUMN `min_weight` DECIMAL(10,2) DEFAULT NULL,
+ADD COLUMN `max_weight` DECIMAL(10,2) DEFAULT NULL,
+ADD COLUMN `max_dimensions` VARCHAR(100) DEFAULT NULL,
+ADD COLUMN `is_fragile` TINYINT(1) DEFAULT 0,
+ADD COLUMN `show_at_checkout` TINYINT(1) DEFAULT 1,
+ADD COLUMN `sort_order` INT DEFAULT 0,
+ADD COLUMN `badge_text` VARCHAR(50) DEFAULT NULL,
+ADD COLUMN `integration_settings` JSON DEFAULT NULL,
+ADD COLUMN `cod_settings` JSON DEFAULT NULL,
+ADD COLUMN `audit_log` JSON DEFAULT NULL;

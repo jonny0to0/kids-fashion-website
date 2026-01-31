@@ -737,28 +737,76 @@ $userStatusCheck = Session::ensureUserActive();
     ?>
     <?php if (!empty($navCategories)): ?>
     <div class="bg-white sticky top-16 z-40 border-b border-gray-200 transition-transform duration-300 ease-in-out" 
-         x-data="{ 
+x-data="{ 
              categoriesOpen: false,
              lastScroll: 0,
              isVisible: true,
+             ticking: false,
+             
              init() {
-                 this.lastScroll = window.pageYOffset;
+                 this.lastScroll = window.pageYOffset || document.documentElement.scrollTop;
+                 
+                 // Throttled scroll listener using requestAnimationFrame
                  window.addEventListener('scroll', () => {
-                     const currentScroll = window.pageYOffset;
-                     if (currentScroll > 100) { // Only hide after scrolling past 100px
-                         if (currentScroll > this.lastScroll) {
-                             // Scrolling down - hide
-                             this.isVisible = false;
-                         } else {
-                             // Scrolling up - show
-                             this.isVisible = true;
-                         }
-                     } else {
-                         // Near top - always show
-                         this.isVisible = true;
+                     if (!this.ticking) {
+                         window.requestAnimationFrame(() => {
+                             this.handleScroll();
+                             this.ticking = false;
+                         });
+                         this.ticking = true;
                      }
+                 }, { passive: true });
+             },
+handleScroll() {
+                 const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+                 const viewportHeight = window.innerHeight;
+                 const showThreshold = viewportHeight / 2;
+                 
+                 // Ignore negative scroll (bounce effect)
+                 if (currentScroll < 0) return;
+                 
+                 // Determine scroll direction first
+                 const scrollDifference = currentScroll - this.lastScroll;
+                 const isScrollingDown = scrollDifference > 0;
+                 const absDiff = Math.abs(scrollDifference);
+                 
+                 // Always show when near top (within 60px) to provide a stable initial view
+                 if (currentScroll < 60) {
+                     this.isVisible = true;
                      this.lastScroll = currentScroll;
-                 });
+                     return;
+                 }
+                 
+                 // Buffer Zone Logic (100px to Threshold)
+                 // Prevents early appearance when wiggling near top,
+                 // but maintains visibility if we scrolled up from deep.
+                 if (currentScroll < showThreshold) {
+                     if (isScrollingDown) {
+                         this.isVisible = false;
+                     } 
+                     // If scrolling up: DO NOT toggle true. 
+                     // Just maintain current state (hidden stays hidden, visible stays visible).
+                     
+                     this.lastScroll = currentScroll;
+                     return;
+                 }
+                 
+                 // Deep Zone Logic (> Threshold)
+                 // Ignore small scroll movements to prevent flickering
+                 if (absDiff < 10) {
+                     this.lastScroll = currentScroll;
+                     return;
+                 }
+                 
+                 if (isScrollingDown) {
+                     // Scrolling down significantly - hide
+                     this.isVisible = false;
+                 } else {
+                     // Scrolling up significantly - show
+                     this.isVisible = true;
+                 }
+                 
+                 this.lastScroll = currentScroll;
              }
          }"
          :class="isVisible ? 'translate-y-0' : '-translate-y-full'">

@@ -77,6 +77,36 @@ class AdminController
     }
 
     /**
+     * Generate Order Invoice
+     */
+    public function ordersInvoice($orderNumber)
+    {
+        $order = $this->orderModel->findByOrderNumber($orderNumber);
+
+        if (!$order) {
+            Session::setFlash('error', 'Order not found');
+            header('Location: ' . SITE_URL . '/admin/orders');
+            exit;
+        }
+
+        $items = $this->orderModel->getOrderItems($order['order_id']);
+        
+        // Get full address details
+        require_once APP_PATH . '/models/Address.php';
+        $addressModel = new Address();
+        $shippingAddress = $addressModel->find($order['shipping_address_id']);
+        $billingAddress = $addressModel->find($order['billing_address_id']);
+
+        $this->render('admin/orders/invoice', [
+            'pageTitle' => 'Invoice #' . $order['order_number'],
+            'order' => $order,
+            'items' => $items,
+            'shippingAddress' => $shippingAddress,
+            'billingAddress' => $billingAddress
+        ]);
+    }
+
+    /**
      * Get orders count per day for last N days
      */
     private function getOrdersPerDay($days = 7)
@@ -715,6 +745,11 @@ class AdminController
      */
     private function handleProductSave($productId = null)
     {
+        // Debug Logging
+        if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
+            error_log('HandleProductSave POST: ' . print_r($_POST, true));
+            error_log('HandleProductSave FILES: ' . print_r($_FILES, true));
+        }
         $data = [
             'name' => Validator::sanitize($_POST['name'] ?? ''),
             'slug' => $this->generateSlug($_POST['name'] ?? ''),
@@ -725,6 +760,24 @@ class AdminController
             'cost_price' => !empty($_POST['cost_price']) ? (float) $_POST['cost_price'] : null,
             'sku' => Validator::sanitize($_POST['sku'] ?? ''),
             'stock_quantity' => (int) ($_POST['stock_quantity'] ?? 0),
+            // Shipping
+            'weight' => !empty($_POST['weight']) ? (float) $_POST['weight'] : null,
+            'dimensions' => Validator::sanitize($_POST['dimensions'] ?? ''),
+            'shipping_class' => Validator::sanitize($_POST['shipping_class'] ?? ''),
+            // Return & Warranty
+            'return_policy' => Validator::sanitize($_POST['return_policy'] ?? '7_days'),
+            'warranty_type' => Validator::sanitize($_POST['warranty_type'] ?? 'none'),
+            'warranty_duration' => Validator::sanitize($_POST['warranty_duration'] ?? ''),
+            'warranty_description' => Validator::sanitize($_POST['warranty_description'] ?? ''),
+            // SEO
+            'meta_title' => Validator::sanitize($_POST['meta_title'] ?? ''),
+            'meta_description' => Validator::sanitize($_POST['meta_description'] ?? ''),
+            'meta_keywords' => Validator::sanitize($_POST['meta_keywords'] ?? ''),
+            // Tax
+            'tax_status' => Validator::sanitize($_POST['tax_status'] ?? 'taxable'),
+            'tax_class' => Validator::sanitize($_POST['tax_class'] ?? 'standard'),
+            'gst_percent' => !empty($_POST['gst_percent']) ? (float) $_POST['gst_percent'] : 18.00,
+            
             // Note: age_group, gender, brand, and material are now handled through the dynamic attribute system
             // They should be defined as attributes for the category/attribute group if needed
             'is_featured' => isset($_POST['is_featured']) ? 1 : 0,
@@ -753,6 +806,27 @@ class AdminController
             $category = $this->categoryModel->getById($categoryId);
             if (!$category) {
                 $errors[] = 'Selected category does not exist';
+            }
+        }
+
+        // Validate Images (Safety Check)
+        if (!$productId) {
+            $hasImages = false;
+            if (!empty($_FILES['new_images']['name'])) {
+                foreach ($_FILES['new_images']['name'] as $idx => $files) {
+                    if (!empty($files['main'])) {
+                        $hasImages = true;
+                        break;
+                    }
+                }
+            }
+            // Also check legacy images just in case
+            if (!$hasImages && !empty($_FILES['images']['name'][0])) {
+                $hasImages = true;
+            }
+
+            if (!$hasImages) {
+                $errors[] = 'At least one product image is required.';
             }
         }
 
@@ -1189,6 +1263,7 @@ class AdminController
     {
         $uploader = new ImageUpload();
         $uploadDir = 'products';
+        $uploadErrors = [];
 
         // 1. Handle Existing Images Zoom Updates
         if (isset($_FILES['existing_zoom_images'])) {
@@ -1209,12 +1284,14 @@ class AdminController
                             $zoomUrl = '/' . $zoomUrl;
                         }
 
-                        // Delete old zoom image if exists? (Optional cleanup)
-
                         $this->productModel->query(
                             "UPDATE product_images SET zoom_image_url = ? WHERE image_id = ? AND product_id = ?",
                             [$zoomUrl, $imageId, $productId]
                         );
+                    } else {
+                         // Log error for zoom update
+                         error_log("Zoom image update failed for product {$productId}, image {$imageId}: " . ($result['error'] ?? 'Unknown error'));
+                         $uploadErrors[] = "Failed to update zoom image: " . ($result['error'] ?? 'Unknown error');
                     }
                 }
             }
@@ -1222,6 +1299,13 @@ class AdminController
 
         // 2. Handle New Images (Rows)
         if (isset($_FILES['new_images'])) {
+            // Check if global error exists (e.g. post_max_size exceeded)
+            if (isset($_FILES['new_images']['error']) && !is_array($_FILES['new_images']['error'])) {
+                 error_log("Global upload error for product {$productId}: " . $_FILES['new_images']['error']);
+                 Session::setFlash('error', 'Image upload failed. File too large or server error.');
+                 return;
+            }
+
             foreach ($_FILES['new_images']['name'] as $index => $files) {
                 // Check if main image exists
                 if (!empty($files['main'])) {
@@ -1258,6 +1342,8 @@ class AdminController
                                 if (strpos($zoomUrl, '/') !== 0) {
                                     $zoomUrl = '/' . $zoomUrl;
                                 }
+                            } else {
+                                $uploadErrors[] = "Zoom image failed for image set #".($index+1).": " . ($zoomResult['error'] ?? 'Unknown error');
                             }
                         }
 
@@ -1279,16 +1365,106 @@ class AdminController
                             "INSERT INTO product_images (product_id, image_url, zoom_image_url, is_primary, display_order, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                             [$productId, $mainUrl, $zoomUrl, $isPrimary, $displayOrder, date('Y-m-d H:i:s')]
                         );
-                    }
+                    } else {
+                        error_log("Main image upload failed for product {$productId}, index {$index}: " . ($mainResult['error'] ?? 'Unknown error'));
                 }
             }
+        }
+    }
+
+        // 3. Handle Image Reordering (New Feature)
+        // 3. Handle Image Reordering (New Feature)
+        if (isset($_POST['image_order']) && !empty($_POST['image_order'])) {
+            $orderString = $_POST['image_order'];
+            error_log("Image Order received for Product {$productId}: " . $orderString); // Debug Log
+
+            $orderedIds = explode(',', $orderString);
+            
+            // Validate IDs are numeric
+            $orderedIds = array_filter($orderedIds, 'is_numeric');
+            
+            if (!empty($orderedIds)) {
+                // strict primary reset: ensure all are 0 first
+                $this->productModel->query("UPDATE product_images SET is_primary = 0 WHERE product_id = ?", [$productId]);
+
+                $displayOrder = 0;
+                foreach ($orderedIds as $imageId) {
+                    // First image (index 0) becomes primary
+                    $isPrimary = ($displayOrder === 0) ? 1 : 0;
+                    
+                    $this->productModel->query(
+                        "UPDATE product_images SET display_order = ?, is_primary = ? WHERE image_id = ? AND product_id = ?",
+                        [$displayOrder, $isPrimary, $imageId, $productId]
+                    );
+                    
+                    $displayOrder++;
+                }
+            }
+        }
+        
+        // If there were upload errors, flash them to the user
+        if (!empty($uploadErrors)) {
+            $existingFlash = Session::getFlash('warning') ?? '';
+            $errorMsg = "Some images could not be uploaded: <br>" . implode('<br>', $uploadErrors);
+            Session::setFlash('warning', $existingFlash . $errorMsg);
         }
 
         // Backward compatibility: If old 'images[]' is used (though we will hide it)
         if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
             // ... legacy code if needed, but we can assume we only use the new one.
-            // Converting legacy bulk upload to new format on the fly if user uses the old input
-            // But I will remove the old input from the form, so this is fine.
+        }
+    }
+
+    /**
+     * Reorder product images (AJAX)
+     * Route: /admin/products/reorder-images
+     */
+    public function productsReorderImages()
+    {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
+        }
+
+        $productId = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
+        $orderString = isset($_POST['image_order']) ? $_POST['image_order'] : '';
+
+        if (!$productId || empty($orderString)) {
+            echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+            exit;
+        }
+
+        $orderedIds = explode(',', $orderString);
+        $orderedIds = array_filter($orderedIds, 'is_numeric');
+
+        if (empty($orderedIds)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid image order data']);
+            exit;
+        }
+
+        try {
+            // Strict primary reset: ensure all are 0 first
+            $this->productModel->query("UPDATE product_images SET is_primary = 0 WHERE product_id = ?", [$productId]);
+
+            $displayOrder = 0;
+            foreach ($orderedIds as $imageId) {
+                // First image (index 0) becomes primary
+                $isPrimary = ($displayOrder === 0) ? 1 : 0;
+                
+                $this->productModel->query(
+                    "UPDATE product_images SET display_order = ?, is_primary = ? WHERE image_id = ? AND product_id = ?",
+                    [$displayOrder, $isPrimary, $imageId, $productId]
+                );
+                
+                $displayOrder++;
+            }
+
+            echo json_encode(['success' => true, 'message' => 'Image order updated successfully']);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
         }
     }
 
@@ -1393,12 +1569,24 @@ class AdminController
      */
     private function requireAdmin()
     {
-        if (!Session::isLoggedIn() || !Session::isAdmin()) {
-            // Check if this is an AJAX request
-            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-                strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        if (!Session::isAdmin()) {
+            // Check if this is an AJAX/API request
+            // Check X-Requested-With header
+            $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+            
+            // Check Accept header
+            if (!$isAjax && !empty($_SERVER['HTTP_ACCEPT'])) {
+                $accept = strtolower($_SERVER['HTTP_ACCEPT']);
+                if (strpos($accept, 'application/json') !== false) {
+                    $isAjax = true;
+                }
+            }
 
             if ($isAjax) {
+                // Clear any existing headers to prevent interference
+                header_remove();
+                http_response_code(403);
+                header('HTTP/1.1 403 Forbidden');
                 header('Content-Type: application/json');
                 echo json_encode([
                     'success' => false,
@@ -3866,9 +4054,12 @@ class AdminController
         }
 
         $pageTitle = 'Settings';
+        $activeSubsection = $_GET['subsection'] ?? '';
+        
         $this->render('admin/settings', [
             'pageTitle' => $pageTitle,
             'activeSection' => $activeSection,
+            'activeSubsection' => $activeSubsection,
             'settingsByGroup' => $settingsByGroup,
             'allSettings' => $allSettings
         ]);
@@ -4954,9 +5145,18 @@ class AdminController
         $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
         $search = Validator::sanitize($_GET['search'] ?? '');
         $status = Validator::sanitize($_GET['status'] ?? '');
+        $customerId = isset($_GET['customer_id']) ? (int) $_GET['customer_id'] : null;
 
-        $sql = "SELECT *, CONCAT(first_name, ' ', last_name) as name FROM users WHERE user_type = ?";
+        $sql = "SELECT *, TRIM(CONCAT(IFNULL(first_name, ''), ' ', IFNULL(last_name, ''))) as name FROM users WHERE user_type = ?";
         $params = [USER_TYPE_CUSTOMER];
+
+        // If specific customer requested, prioritize/filter them
+        // We'll still show others, but we might want to ensure they are on the first page or just show one.
+        // For deep linking, usually showing just that one or including it in the search is best.
+        if ($customerId) {
+            $sql .= " AND user_id = ?";
+            $params[] = $customerId;
+        }
 
         if (!empty($status)) {
             $sql .= " AND status = ?";
@@ -4992,6 +5192,11 @@ class AdminController
             $countParams[] = $searchTerm;
             $countParams[] = $searchTerm;
             $countParams[] = $searchTerm;
+        }
+
+        if ($customerId) {
+            $countSql .= " AND user_id = ?";
+            $countParams[] = $customerId;
         }
         $countStmt = $this->userModel->query($countSql, $countParams);
         $total = $countStmt->fetch()['total'] ?? 0;
@@ -5443,6 +5648,375 @@ class AdminController
         } else {
             $controller->index();
         }
+    }
+
+    /**
+     * Notification List Page
+     * Route: /admin/notifications
+     */
+    public function notifications()
+    {
+        require_once APP_PATH . '/models/Notification.php';
+        $notificationModel = new Notification();
+        
+        $userId = Session::getUserId();
+        $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+        $perPage = 20;
+        $offset = ($page - 1) * $perPage;
+
+        // Filters
+        $filters = [];
+        if (isset($_GET['type']) && !empty($_GET['type'])) {
+            $filters['type'] = $_GET['type'];
+        }
+
+        // Get notifications
+        $notifications = $notificationModel->getUserNotifications($userId, $perPage, $offset, $filters);
+        
+        // Get total count for pagination
+        $totalNotifications = $notificationModel->countUserNotifications($userId, $filters);
+        
+        require_once APP_PATH . '/helpers/Pagination.php';
+        $pagination = new Pagination($totalNotifications, $perPage, $page);
+
+        $pageTitle = 'Notifications';
+        
+        // Render view
+        extract([
+            'pageTitle' => $pageTitle,
+            'notifications' => $notifications,
+            'pagination' => $pagination,
+            'currentFilter' => $filters['type'] ?? 'all'
+        ]);
+        
+        require_once APP_PATH . '/views/layouts/admin_header.php';
+        require_once APP_PATH . '/views/admin/notifications/index.php';
+        require_once APP_PATH . '/views/layouts/admin_footer.php';
+    }
+
+    /**
+     * Get latest notifications (AJAX)
+     * Route: /admin/notifications/latest
+     */
+    public function notificationsLatest()
+    {
+        header('Content-Type: application/json');
+        
+        try {
+            require_once APP_PATH . '/models/Notification.php';
+            $notificationModel = new Notification();
+            
+            $userId = Session::getUserId();
+            $notifications = $notificationModel->getUserNotifications($userId, 5);
+            $unreadCount = $notificationModel->getUnreadCount($userId);
+
+            echo json_encode([
+                'success' => true,
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount
+            ]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Mark notification as read (AJAX)
+     * Route: /admin/notifications/mark-read
+     */
+    public function notificationsMarkRead()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            return;
+        }
+
+        require_once APP_PATH . '/models/Notification.php';
+        $notificationModel = new Notification();
+
+        $userId = Session::getUserId();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $notificationId = $data['id'] ?? null;
+
+        if (!$notificationId) {
+            echo json_encode(['error' => 'Missing notification ID']);
+            return;
+        }
+
+        try {
+            $notificationModel->markAsRead($notificationId, $userId);
+            $unreadCount = $notificationModel->getUnreadCount($userId);
+            
+            echo json_encode([
+                'success' => true, 
+                'unread_count' => $unreadCount
+            ]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Mark all as read (AJAX)
+     * Route: /admin/notifications/mark-all-read
+     */
+    public function notificationsMarkAllRead()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            return;
+        }
+
+        require_once APP_PATH . '/models/Notification.php';
+        $notificationModel = new Notification();
+
+        $userId = Session::getUserId();
+
+        try {
+            $notificationModel->markAllAsRead($userId);
+            
+            echo json_encode([
+                'success' => true,
+                'unread_count' => 0
+            ]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get Customer Details (AJAX)
+     * Used for modal in various admin pages (Customers, Notifications)
+     * Route: /admin/customer-details/{id}
+     */
+    public function customerDetails($id)
+    {
+        header('Content-Type: application/json');
+
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ID']);
+            return;
+        }
+
+        require_once APP_PATH . '/models/User.php';
+        require_once APP_PATH . '/models/Order.php';
+
+        $userModel = new User();
+        $orderModel = new Order();
+
+        $customer = $userModel->find($id);
+
+        if (!$customer) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Customer not found']);
+            return;
+        }
+
+        // Construct full name if not present
+        if (!isset($customer['name'])) {
+            $customer['name'] = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
+        }
+
+        // Augment with stats
+        $stats = $userModel->query("
+            SELECT 
+                COUNT(*) as order_count,
+                SUM(final_amount) as total_spend,
+                MAX(created_at) as last_order_date
+            FROM orders 
+            WHERE user_id = ?
+        ", [$id])->fetch();
+
+        $customer['order_count'] = $stats['order_count'] ?? 0;
+        $customer['total_spend'] = $stats['total_spend'] ?? 0;
+        $customer['last_order_date'] = $stats['last_order_date'] ?? null;
+
+        // Ensure sensitive data is not sent or is sanitized if strictly needed
+        // (password is already hashed, but good practice to unset)
+        unset($customer['password']);
+        unset($customer['reset_token']);
+
+        echo json_encode(['success' => true, 'customer' => $customer]);
+    }
+
+    /**
+     * Delete notification
+     * Route: /admin/notifications/delete/{id}
+     */
+    public function notificationsDelete($id)
+    {
+        require_once APP_PATH . '/models/Notification.php';
+        $notificationModel = new Notification();
+        
+        $userId = Session::getUserId();
+        $notificationModel->deleteNotification($id, $userId);
+        
+        // Redirect back
+        header('Location: ' . $_SERVER['HTTP_REFERER']);
+        exit;
+    }
+
+    /**
+     * Delete all notifications (AJAX)
+     * Route: /admin/notifications/delete-all
+     */
+    public function notificationsDeleteAll()
+    {
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            return;
+        }
+
+        require_once APP_PATH . '/models/Notification.php';
+        $notificationModel = new Notification();
+        
+        $userId = Session::getUserId();
+
+        try {
+            $notificationModel->clearAll($userId);
+            echo json_encode(['success' => true]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Handle notification click (Mark as read & Redirect)
+     * Route: /admin/notifications/click/{id}
+     */
+    public function notificationsClick($id = null)
+    {
+        if (!$id) {
+            header('Location: ' . SITE_URL . '/admin/notifications');
+            exit;
+        }
+
+        require_once APP_PATH . '/models/Notification.php';
+        $notificationModel = new Notification();
+        
+        $userId = Session::getUserId();
+        
+        // Find notification to ensure ownership and get link
+        // We can use a simple query or existing method if available
+        // For now, let's just mark it read and assume it exists/belongs to user to be safe, 
+        // but ideally we should fetch it first.
+        
+        // Fetch specific notification (we need a findOne method or similar in model, or use query)
+        $notification = $notificationModel->query(
+            "SELECT * FROM notifications WHERE notification_id = ? AND user_id = ?", 
+            [$id, $userId]
+        )->fetch();
+        
+        if ($notification) {
+            // Mark as read
+            $notificationModel->markAsRead($id, $userId);
+
+            // Determine redirection target
+            $redirectUrl = SITE_URL . '/admin/notifications'; // Default fallback
+
+            // 1. Order Notifications
+            if ($notification['type'] === 'order') {
+                if (!empty($notification['related_id'])) {
+                     $redirectUrl = SITE_URL . '/admin/orders/' . $notification['related_id'];
+                } elseif (!empty($notification['link'])) {
+                    $redirectUrl = SITE_URL . $notification['link']; // Fallback to link if related_id missing
+                } else {
+                    $redirectUrl = SITE_URL . '/admin/orders';
+                }
+            } 
+            // 2. User/Customer Notifications
+            elseif ($notification['type'] === 'user') {
+                if (!empty($notification['related_id'])) {
+                    // Redirect to customers page with ID param to trigger modal/highlight
+                    $redirectUrl = SITE_URL . '/admin/customers?customer_id=' . $notification['related_id'];
+                } else {
+                    $redirectUrl = SITE_URL . '/admin/customers';
+                }
+            }
+            // 3. Product Notifications
+            elseif ($notification['type'] === 'product') {
+                if (!empty($notification['related_id'])) {
+                    // Check if it's a review event
+                    if ($notification['event_name'] === 'review_submitted') {
+                        $redirectUrl = SITE_URL . '/admin/products/reviews/view/' . $notification['related_id'];
+                    } else {
+                        $redirectUrl = SITE_URL . '/admin/product/edit/' . $notification['related_id'];
+                    }
+                } else {
+                    $redirectUrl = SITE_URL . '/admin/products';
+                }
+            }
+            // 4. System Notifications
+            elseif ($notification['type'] === 'system') {
+                 // Explicit check for Support Tickets
+                if ($notification['event_name'] === 'ticket_created' && !empty($notification['related_id'])) {
+                     $redirectUrl = SITE_URL . '/admin/support/view/' . $notification['related_id'];
+                }
+                 // If generic link exists and is NOT just the list itself, use it
+                elseif (!empty($notification['link']) && 
+                    $notification['link'] !== '#' && 
+                    $notification['link'] !== '/admin/notifications' &&
+                    $notification['link'] !== '/admin/settings') {
+                     $redirectUrl = SITE_URL . $notification['link'];
+                } else {
+                     // Fallback to detail view to see full message
+                     $redirectUrl = SITE_URL . '/admin/notifications/view/' . $id;
+                }
+            }
+            // 5. Explicit Link Fallback (for legacy or custom types)
+            elseif (!empty($notification['link']) && $notification['link'] !== '#') {
+                $redirectUrl = SITE_URL . $notification['link'];
+            }
+
+            // Fix common path issues in legacy links (just in case)
+            if (strpos($redirectUrl, '/admin/orders/detail/') !== false) {
+                $redirectUrl = str_replace('/admin/orders/detail/', '/admin/orders/', $redirectUrl);
+            }
+            if (strpos($redirectUrl, '/admin/users') !== false) {
+                 $redirectUrl = str_replace('/admin/users', '/admin/customers', $redirectUrl);
+            }
+
+            header('Location: ' . $redirectUrl);
+            exit;
+        }
+        
+        // Default redirect if not found or no link
+        header('Location: ' . SITE_URL . '/admin/notifications');
+        exit;
+    }
+
+    /**
+     * View Single Notification (Fallback for items without links)
+     */
+    public function notificationsView($id)
+    {
+        require_once APP_PATH . '/models/Notification.php';
+        $notificationModel = new Notification();
+        $notification = $notificationModel->find($id);
+
+        if (!$notification) {
+            header('Location: ' . SITE_URL . '/admin/notifications');
+            exit;
+        }
+
+        $this->render('admin/notifications/view', [
+            'pageTitle' => 'Notification Details',
+            'notification' => $notification
+        ]);
     }
 
     /**

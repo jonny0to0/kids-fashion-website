@@ -208,6 +208,17 @@ class OrderController
         // Update order status to cancelled
         $this->orderModel->updateStatus($order['order_id'], ORDER_STATUS_CANCELLED);
 
+        // Trigger Order Cancelled Event
+        if (file_exists(APP_PATH . '/services/EventService.php')) {
+            require_once APP_PATH . '/services/EventService.php';
+            (new EventService())->dispatch(EventService::EVENT_ORDER_CANCELLED, [
+                'user_id' => $userId,
+                'user_name' => Session::get('user_name'),
+                'order_id' => $order['order_id'],
+                'order_number' => $orderNumber
+            ]);
+        }
+
         Session::setFlash('success', 'Order #' . $orderNumber . ' has been cancelled successfully.');
         header('Location: ' . SITE_URL . '/order');
         exit;
