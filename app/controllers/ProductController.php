@@ -58,7 +58,7 @@ class ProductController
         }
 
         $images = $this->productModel->getImages($product['product_id']);
-        $variants = $this->productModel->getVariants($product['product_id']);
+        $variants = $this->productModel->getVariants($product['product_id'], true);
         $reviews = $this->reviewModel->getProductReviews($product['product_id'], ['limit' => 5]);
         $rating = $this->reviewModel->getProductRatingStats($product['product_id']);
 

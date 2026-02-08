@@ -66,7 +66,9 @@ class Cart extends Model {
                 p.stock_quantity, p.max_order_quantity,
                 COALESCE(p.sale_price, p.price) as product_price,
                 (SELECT image_url FROM product_images WHERE product_id = p.product_id AND is_primary = 1 LIMIT 1) as image,
-                pv.size, pv.color, pv.color_code, pv.stock_quantity as variant_stock,
+                pv.stock_quantity as variant_stock, pv.price as variant_price, pv.image_url as variant_image,
+                (SELECT GROUP_CONCAT(CONCAT(attribute_name, ': ', attribute_value) SEPARATOR ', ') 
+                 FROM variant_attributes WHERE variant_id = ci.variant_id) as variant_attributes,
                 u.first_name, u.last_name,
                 CASE 
                     WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL 
@@ -92,6 +94,11 @@ class Cart extends Model {
                 $item['discount_percentage'] = round((($item['original_price'] - $item['sale_price']) / $item['original_price']) * 100);
             } else {
                 $item['discount_percentage'] = 0;
+            }
+
+            // Use variant image if available
+            if (!empty($item['variant_image'])) {
+                $item['image'] = $item['variant_image'];
             }
             
             // Calculate estimated delivery date (3-7 business days)

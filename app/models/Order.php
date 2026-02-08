@@ -49,8 +49,8 @@ class Order extends Model
      */
     public function addOrderItem($orderId, $item)
     {
-        $sql = "INSERT INTO order_items (order_id, product_id, variant_id, product_name, product_image, quantity, price, discount, tax, total)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO order_items (order_id, product_id, variant_id, product_name, product_image, quantity, price, discount, tax, total, attributes_snapshot)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $this->query($sql, [
             $orderId,
@@ -62,7 +62,8 @@ class Order extends Model
             $item['price'],
             $item['discount'] ?? 0,
             $item['tax'] ?? 0,
-            $item['total']
+            $item['total'],
+            isset($item['attributes']) ? json_encode($item['attributes']) : null
         ]);
     }
 
@@ -435,6 +436,14 @@ class Order extends Model
             // new_status column is NOT NULL in the database
             $currentOrderStatus = $order['order_status'];
             $this->logStatusChange($orderId, $changedBy, $currentOrderStatus, $currentOrderStatus, $oldStatus, $status);
+            
+            // Trigger Top Selling Update logic
+            if ($status === 'paid') {
+                 // Update sales stats for products in this order
+                 require_once APP_PATH . '/services/TopSellingService.php';
+                 $topSellingService = new TopSellingService();
+                 $topSellingService->updateForOrder($orderId);
+            }
         }
 
         return $result;
@@ -465,6 +474,23 @@ class Order extends Model
 
         if ($result && $oldStatus !== $status) {
             $this->logStatusChange($orderId, $changedBy, $oldStatus, $status, null, null, $notes);
+            
+            // Trigger Top Selling Update logic
+            // We update on any status change that might affect eligibility (Confirmed, Processing, Shipped, Delivered, Completed, Cancelled, Returned)
+            $triggerStatuses = [
+                ORDER_STATUS_CONFIRMED, 
+                ORDER_STATUS_PROCESSING, 
+                ORDER_STATUS_SHIPPED, 
+                ORDER_STATUS_DELIVERED, 
+                'completed', 
+                ORDER_STATUS_CANCELLED, 
+                ORDER_STATUS_RETURNED
+            ];
+            if (in_array($status, $triggerStatuses) || in_array($oldStatus, $triggerStatuses)) {
+                 require_once APP_PATH . '/services/TopSellingService.php';
+                 $topSellingService = new TopSellingService();
+                 $topSellingService->updateForOrder($orderId);
+            }
         }
 
         return $result;
@@ -820,6 +846,116 @@ class Order extends Model
         $stmt = $this->query($sql, $params);
         $result = $stmt->fetch();
         return $result['total'] ?? 0;
+    }
+
+
+    /**
+     * Get orders containing a specific product
+     */
+    public function getOrdersByProduct($productId, $limit = 50)
+    {
+        $sql = "SELECT o.*, oi.quantity as item_quantity, oi.price as item_price, oi.total as item_total,
+                u.first_name, u.last_name, u.email
+                FROM orders o
+                JOIN order_items oi ON o.order_id = oi.order_id
+                LEFT JOIN users u ON o.user_id = u.user_id
+                WHERE oi.product_id = ?
+                ORDER BY o.created_at DESC
+                LIMIT ?";
+        
+        $stmt = $this->query($sql, [$productId, $limit]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Get sales statistics for a specific product
+     */
+    public function getSalesStatsByProduct($productId)
+    {
+        // Only count delivered/completed orders for revenue
+        // But count all valid orders for potential sales visibility
+        
+        $sql = "SELECT 
+                COALESCE(SUM(oi.quantity), 0) as total_orders,
+                SUM(CASE WHEN o.order_status = 'delivered' OR o.order_status = 'completed' THEN oi.quantity ELSE 0 END) as total_units_sold,
+                SUM(CASE WHEN o.order_status = 'delivered' OR o.order_status = 'completed' THEN oi.total ELSE 0 END) as total_revenue,
+                SUM(CASE WHEN o.order_status = 'returned' THEN oi.quantity ELSE 0 END) as returned_units
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE oi.product_id = ?";
+                
+        $stmt = $this->query($sql, [$productId]);
+        $result = $stmt->fetch();
+        
+        return $result ?: [
+            'total_orders' => 0,
+            'total_units_sold' => 0,
+            'total_revenue' => 0,
+            'returned_units' => 0
+        ];
+    }
+
+    /**
+     * Get payments for an order
+     */
+    public function getPayments($orderId)
+    {
+        $sql = "SELECT p.*, 
+                CONCAT(u.first_name, ' ', u.last_name) as created_by_name
+                FROM order_payments p
+                LEFT JOIN users u ON p.created_by = u.user_id
+                WHERE p.order_id = ?
+                ORDER BY p.created_at DESC";
+        return $this->query($sql, [$orderId])->fetchAll();
+    }
+
+    /**
+     * Add a payment record
+     */
+    public function addPayment($data)
+    {
+        $sql = "INSERT INTO order_payments (order_id, transaction_id, payment_method, amount, status, type, notes, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        $this->query($sql, [
+            $data['order_id'],
+            $data['transaction_id'] ?? null,
+            $data['payment_method'],
+            $data['amount'],
+            $data['status'] ?? 'pending',
+            $data['type'] ?? 'payment',
+            $data['notes'] ?? null,
+            $data['created_by'] ?? null
+        ]);
+        
+        return $this->db->lastInsertId();
+    }
+
+    /**
+     * Process Refund
+     */
+    public function processRefund($orderId, $amount, $reason, $adminId)
+    {
+        try {
+            $this->db->beginTransaction();
+
+            $this->addPayment([
+                'order_id' => $orderId,
+                'payment_method' => 'manual',
+                'amount' => $amount,
+                'status' => 'refunded',
+                'type' => 'refund',
+                'notes' => $reason,
+                'created_by' => $adminId
+            ]);
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log("Refund failed: " . $e->getMessage());
+            return false;
+        }
     }
 }
 

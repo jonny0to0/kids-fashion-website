@@ -93,9 +93,11 @@ require_once __DIR__ . '/_quick_actions.php';
                             <tr class="hover:bg-gray-50">
                                 <td class="px-2 py-2 whitespace-nowrap">
                                     <?php if (!empty($product['primary_image'])): ?>
-                                        <img src="<?php echo SITE_URL . $product['primary_image']; ?>"
-                                            alt="<?php echo htmlspecialchars($product['name']); ?>" class="w-20 h-20 rounded"
-                                            onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
+                                        <a href="<?php echo SITE_URL; ?>/admin/product/details/<?php echo $product['product_id']; ?>">
+                                            <img src="<?php echo SITE_URL . $product['primary_image']; ?>"
+                                                alt="<?php echo htmlspecialchars($product['name']); ?>" class="w-20 h-20 rounded hover:opacity-80 transition-opacity"
+                                                onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
+                                        </a>
                                         <!-- object-cover -->
                                     <?php else: ?>
                                         <div class="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
@@ -110,7 +112,9 @@ require_once __DIR__ . '/_quick_actions.php';
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm font-medium text-gray-900">
-                                        <?php echo htmlspecialchars($product['name']); ?>
+                                        <a href="<?php echo SITE_URL; ?>/admin/product/details/<?php echo $product['product_id']; ?>" class="hover:text-pink-600 hover:underline">
+                                            <?php echo htmlspecialchars($product['name']); ?>
+                                        </a>
                                     </div>
                                     <div class="text-sm text-gray-500">SKU:
                                         <?php echo htmlspecialchars($product['sku'] ?? 'N/A'); ?>

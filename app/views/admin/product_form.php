@@ -194,7 +194,7 @@ require_once __DIR__ . '/_back_button.php';
                     </div>
 
                     <div class="md:col-span-2">
-                        <div class="flex flex-col md:flex-row gap-3 md:gap-6 mt-2">
+                        <div class="flex flex-col md:flex-row gap-3 md:gap-6 mt-2 flex-wrap">
                             <label class="flex items-center">
                                 <input type="checkbox" name="is_featured" value="1" <?php echo ($product['is_featured'] ?? ($data['is_featured'] ?? 0)) ? 'checked' : ''; ?> class="mr-2">
                                 <span class="text-gray-700">Featured Product</span>
@@ -205,8 +205,10 @@ require_once __DIR__ . '/_back_button.php';
                             </label>
                             <label class="flex items-center">
                                 <input type="checkbox" name="is_bestseller" value="1" <?php echo ($product['is_bestseller'] ?? ($data['is_bestseller'] ?? 0)) ? 'checked' : ''; ?> class="mr-2">
-                                <span class="text-gray-700">Bestseller</span>
+                                <span class="text-gray-700">Bestseller (Manual Flag)</span>
                             </label>
+                            
+
                         </div>
                     </div>
                  </div>
@@ -405,39 +407,204 @@ require_once __DIR__ . '/_back_button.php';
             <!-- Variants Tab -->
             <div class="tab-content hidden" id="content-variants">
                 <div class="md:col-span-2">
-                    <h2 class="text-xl font-bold text-gray-800 mb-3 md:mb-4">Product Variants</h2>
-                    <p class="text-sm text-gray-500 mb-4">Add size and color combinations with individual stock and pricing</p>
-                    <div id="variants-container">
-                        <?php if (!empty($variants)): ?>
-                            <?php foreach ($variants as $index => $variant): ?>
-                                <div class="variant-item mb-4 p-4 border border-gray-200 rounded-lg" data-variant-index="<?php echo $index; ?>">
-                                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                                        <input type="hidden" name="variants[<?php echo $index; ?>][variant_id]" value="<?php echo $variant['variant_id']; ?>">
-                                        <div>
-                                            <label class="block text-gray-700 font-medium mb-2 text-sm">Size *</label>
-                                            <input type="text" name="variants[<?php echo $index; ?>][size]" value="<?php echo htmlspecialchars($variant['size']); ?>" required class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                                        </div>
-                                        <div>
-                                            <label class="block text-gray-700 font-medium mb-2 text-sm">Color</label>
-                                            <input type="text" name="variants[<?php echo $index; ?>][color]" value="<?php echo htmlspecialchars($variant['color'] ?? ''); ?>" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                                        </div>
-                                        <div>
-                                            <label class="block text-gray-700 font-medium mb-2 text-sm">Stock *</label>
-                                            <input type="number" name="variants[<?php echo $index; ?>][stock_quantity]" value="<?php echo $variant['stock_quantity']; ?>" required min="0" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                                        </div>
-                                        <div>
-                                            <label class="block text-gray-700 font-medium mb-2 text-sm">Additional Price (₹)</label>
-                                            <input type="number" step="0.01" name="variants[<?php echo $index; ?>][additional_price]" value="<?php echo $variant['additional_price']; ?>" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                                        </div>
-                                        <div class="flex items-end">
-                                            <button type="button" onclick="removeVariant(<?php echo $index; ?>)" class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">Remove</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span class="bg-pink-100 text-pink-600 p-1.5 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        </span>
+                        Product Variants
+                    </h2>
+                    
+                    <!-- Generator Toolbar -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wide flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                Quick Generator
+                            </h3>
+                            <span class="text-xs text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded">Batch Creation Tool</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
+                            <div class="md:col-span-3">
+                                <label class="block text-xs font-bold text-slate-600 uppercase mb-2">Sizes <span class="font-normal text-slate-400 normal-case">(comma separated)</span></label>
+                                <input type="text" id="gen-sizes" placeholder="e.g. S, M, L, XL" 
+                                    class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all shadow-sm">
+                            </div>
+                            <div class="md:col-span-3">
+                                <label class="block text-xs font-bold text-slate-600 uppercase mb-2">Colors <span class="font-normal text-slate-400 normal-case">(comma separated)</span></label>
+                                <input type="text" id="gen-colors" placeholder="e.g. Red, Blue, Green" 
+                                    class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 transition-all shadow-sm">
+                            </div>
+                            <div class="md:col-span-1">
+                                <button type="button" onclick="generateVariants()" 
+                                    class="w-full bg-slate-800 text-white px-4 py-2.5 rounded-lg hover:bg-slate-900 font-bold text-sm shadow-md hover:shadow-lg transition-all transform active:scale-95 border border-transparent">
+                                    Generate
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <button type="button" onclick="addVariant()" class="w-full sm:w-auto bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm font-medium">+ Add Variant</button>
+
+                    <!-- Variants Table Container -->
+                    <div class="bg-white border border-slate-200 rounded-xl shadow-lg ring-1 ring-black/5 overflow-hidden">
+                        <div class="bg-slate-100/50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-slate-700">Active Variants</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Manage stock, prices, and images for each combination</p>
+                            </div>
+                            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200" id="variant-count-badge">
+                                <?php echo !empty($variants) ? count($variants) : 0; ?> Variants
+                            </span>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead>
+                                    <tr class="bg-slate-50">
+                                        <th class="px-5 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-[120px]">Image</th>
+                                        <th class="px-5 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Parameters</th>
+                                        <th class="px-5 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-[320px]">SKU</th>
+                                        <th class="px-5 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-[140px]">Stock</th>
+                                        <th class="px-5 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-[240px]">MRP</th>
+                                        <th class="px-5 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-[240px]">Selling Price</th>
+                                        <th class="px-5 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider w-[120px]">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="variants-table-body" class="divide-y divide-slate-200 bg-white">
+                                    <?php if (!empty($variants)): ?>
+                                        <?php foreach ($variants as $index => $variant): ?>
+                                            <tr class="variant-item group hover:bg-blue-50/30 transition-colors" data-variant-index="<?php echo $index; ?>">
+                                                <input type="hidden" name="variants[<?php echo $index; ?>][variant_id]" value="<?php echo $variant['variant_id']; ?>">
+                                                
+                                                <!-- Image -->
+                                                <td class="px-2 py-4 align-top">
+                                                    <div class="flex flex-col items-center">
+                                                        <div class="relative w-14 h-14 rounded-lg border-2 border-slate-200 bg-white overflow-hidden shadow-sm group hover:border-pink-400 transition-colors cursor-pointer">
+                                                            <?php $imgUrl = $variant['image_url'] ?? ''; ?>
+                                                            <img src="<?php echo !empty($imgUrl) ? SITE_URL . $imgUrl : SITE_URL . '/assets/images/no-image.png'; ?>" 
+                                                                 class="w-full h-full object-cover variant-preview-img" 
+                                                                 onerror="this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png'">
+                                                            
+                                                            <input type="file" name="variants[<?php echo $index; ?>][image_file]" accept="image/*" 
+                                                                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                                                   onchange="initCropper(this)">
+                                                            
+                                                            <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+                                                            </div>
+                                                        </div>
+                                                        <input type="hidden" name="variants[<?php echo $index; ?>][existing_image_url]" value="<?php echo htmlspecialchars($imgUrl); ?>">
+                                                        
+                                                        <div class="mt-2 w-full text-center">
+                                                            <button type="button" onclick="toggleVariantUrlInput(this)" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wider">Link</button>
+                                                            <input type="text" name="variants[<?php echo $index; ?>][image_url_text]" 
+                                                                class="hidden w-full mt-1 bg-white border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:ring-1 focus:ring-pink-500 focus:border-pink-500" 
+                                                                placeholder="https://...">
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <!-- Attributes -->
+                                                <td class="px-2 py-4 align-top">
+                                                    <div class="space-y-3">
+                                                        <div class="flex items-center gap-3">
+                                                            <span class="w-10 text-xs font-bold text-slate-500 uppercase tracking-wide">Size</span>
+                                                            <input type="text" name="variants[<?php echo $index; ?>][size]" 
+                                                                value="<?php echo htmlspecialchars($variant['attributes']['Size'] ?? ''); ?>" required 
+                                                                class="w-24 bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm"
+                                                                placeholder="S, M...">
+                                                        </div>
+                                                        <div class="flex items-center gap-3">
+                                                            <span class="w-10 text-xs font-bold text-slate-500 uppercase tracking-wide">Color</span>
+                                                            <div class="flex-1 flex gap-2">
+                                                                <div class="relative">
+                                                                    <input type="color" name="variants[<?php echo $index; ?>][color_code]" 
+                                                                        value="<?php echo htmlspecialchars($variant['attributes']['Color Code'] ?? '#000000'); ?>" 
+                                                                        class="h-9 w-9 p-0.5 border border-gray-300 rounded cursor-pointer shadow-sm bg-white">
+                                                                </div>
+                                                                <input type="text" name="variants[<?php echo $index; ?>][color]" 
+                                                                    value="<?php echo htmlspecialchars($variant['attributes']['Color'] ?? ''); ?>" 
+                                                                    class="flex-1 bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm transition-shadow" 
+                                                                    placeholder="Color Name">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <!-- SKU -->
+                                                <td class="px-2 py-4 align-top">
+                                                    <div class="relative">
+                                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                            <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                                                        </div>
+                                                        <input type="text" name="variants[<?php echo $index; ?>][sku]" 
+                                                            value="<?php echo htmlspecialchars($variant['sku'] ?? ''); ?>" 
+                                                            class="pl-9 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 font-mono focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm"
+                                                            placeholder="SKU-123">
+                                                    </div>
+                                                </td>
+
+                                                <!-- Stock -->
+                                                <td class="px-2 py-4 align-top">
+                                                    <div class="relative">
+                                                        <input type="number" name="variants[<?php echo $index; ?>][stock_quantity]" 
+                                                            value="<?php echo $variant['stock_quantity']; ?>" required min="0" 
+                                                            class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm font-semibold text-gray-900 text-center focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm">
+                                                        <div class="text-[10px] text-center text-slate-400 mt-1 uppercase font-bold tracking-wider">Units</div>
+                                                    </div>
+                                                </td>
+
+                                                <!-- MRP -->
+                                                <td class="px-2 py-4 align-top">
+                                                    <div class="relative">
+                                                        <span class="absolute left-3 top-3 text-slate-500 font-bold text-sm">₹</span>
+                                                        <input type="number" step="0.01" name="variants[<?php echo $index; ?>][price]" 
+                                                            value="<?php echo isset($variant['price']) ? $variant['price'] : ''; ?>" 
+                                                            class="w-full h-11 bg-white border border-gray-300 rounded-md pl-7 pr-3 py-2 text-base font-semibold text-gray-900 text-right focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm" placeholder="0.00">
+                                                    </div>
+                                                </td>
+
+                                                <!-- Selling Price -->
+                                                <td class="px-2 py-4 align-top">
+                                                    <div class="relative">
+                                                        <span class="absolute left-3 top-3 text-green-600 font-bold text-sm">₹</span>
+                                                        <input type="number" step="0.01" name="variants[<?php echo $index; ?>][sale_price]" 
+                                                            value="<?php echo isset($variant['sale_price']) ? $variant['sale_price'] : ''; ?>" 
+                                                            class="w-full h-11 bg-white border border-gray-300 rounded-md pl-7 pr-3 py-2 text-base font-semibold text-green-700 text-right focus:border-green-500 focus:ring-1 focus:ring-green-500 shadow-sm" placeholder="0.00">
+                                                    </div>
+                                                </td>
+
+                                                <!-- Actions -->
+                                                <td class="px-2 py-4 align-top text-right">
+                                                    <div class="flex items-center justify-end gap-2">
+                                                        <!-- Status Toggle -->
+                                                        <label class="relative inline-flex items-center cursor-pointer">
+                                                            <input type="hidden" name="variants[<?php echo $index; ?>][is_active]" value="0">
+                                                            <input type="checkbox" name="variants[<?php echo $index; ?>][is_active]" value="1" 
+                                                                class="sr-only peer" <?php echo (!isset($variant['is_active']) || $variant['is_active'] == 1) ? 'checked' : ''; ?>>
+                                                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-pink-600"></div>
+                                                        </label>
+                                                        
+                                                        <button type="button" onclick="removeVariant(<?php echo $index; ?>)" 
+                                                            class="text-slate-400 hover:text-red-600 transition-colors p-2 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-100 shadow-sm">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Footer / Add Button -->
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
+                            <button type="button" onclick="addVariant()" 
+                                class="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 px-5 py-2.5 rounded-lg hover:bg-slate-50 hover:text-pink-600 hover:border-pink-300 font-bold text-sm shadow-sm transition-all group">
+                                <span class="bg-slate-100 text-slate-500 rounded-full w-5 h-5 flex items-center justify-center text-xs group-hover:bg-pink-100 group-hover:text-pink-600 transition-colors">+</span>
+                                Add Single Variant Row
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -1008,12 +1175,21 @@ require_once __DIR__ . '/_back_button.php';
             currentInput._cropped = true;
 
             // Update preview
-            previewImage(currentInput); 
-            
+            if (isVariantInput(currentInput)) {
+                previewVariantImage(currentInput);
+            } else {
+                previewImage(currentInput); 
+            }
+                        
             // Close modal
             closeCropperModal();
             
         }, fileType);
+    }
+
+    // Helper to determine if input is for a variant (crude but effective check on name)
+    function isVariantInput(input) {
+        return input.name && input.name.indexOf('variants[') !== -1;
     }
     
     function closeCropperModal() {
@@ -1221,52 +1397,7 @@ require_once __DIR__ . '/_back_button.php';
         }
     }
     
-    // Variant management
-    function addVariant() {
-        const container = document.getElementById('variants-container');
-        const variantHtml = `
-        <div class="variant-item mb-4 p-4 border border-gray-200 rounded-lg" data-variant-index="${variantIndex}">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2 text-sm">Size *</label>
-                    <input type="text" name="variants[${variantIndex}][size]" required
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2 text-sm">Color</label>
-                    <input type="text" name="variants[${variantIndex}][color]"
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2 text-sm">Stock *</label>
-                    <input type="number" name="variants[${variantIndex}][stock_quantity]" required min="0"
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2 text-sm">Additional Price (₹)</label>
-                    <input type="number" step="0.01" name="variants[${variantIndex}][additional_price]"
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                </div>
-                <div class="flex items-end">
-                    <button type="button" onclick="removeVariant(${variantIndex})" 
-                            class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
-                        Remove
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
 
-        container.insertAdjacentHTML('beforeend', variantHtml);
-        variantIndex++;
-    }
-
-    function removeVariant(index) {
-        const variantItem = document.querySelector(`[data-variant-index="${index}"]`);
-        if (variantItem) {
-            variantItem.remove();
-        }
-    }
 
 
     const tabOrder = ['general', 'pricing', 'inventory', 'attributes', 'variants', 'shipping', 'warranty', 'seo', 'images', 'review'];
@@ -1471,6 +1602,33 @@ require_once __DIR__ . '/_back_button.php';
                     });
                 }
             });
+        });
+
+        // Specific Validation: Variant Images (Required if Color is present)
+        const variantItems = document.querySelectorAll('.variant-item');
+        variantItems.forEach(item => {
+            const colorInput = item.querySelector('input[name$="[color]"]');
+            const imageFileInput = item.querySelector('input[name$="[image_file]"]');
+            const existingImageInput = item.querySelector('input[name$="[existing_image_url]"]');
+            const urlTextInput = item.querySelector('input[name$="[image_url_text]"]');
+            
+            if (colorInput && colorInput.value.trim() !== "") {
+                const hasFile = imageFileInput && imageFileInput.files.length > 0;
+                const hasExisting = existingImageInput && existingImageInput.value.trim() !== "";
+                const hasUrl = urlTextInput && urlTextInput.value.trim() !== "";
+                
+                if (!hasFile && !hasExisting && !hasUrl) {
+                    isValid = false;
+                    allErrors.push({
+                        field: imageFileInput ? imageFileInput.name : 'variant_image',
+                        label: `Image is required for color variant "${colorInput.value}"`,
+                        element: imageFileInput || colorInput,
+                        tabId: 'variants'
+                    });
+                     // Mark the input visually
+                    if(imageFileInput) markInputError(imageFileInput, 'Required for color variants');
+                }
+            }
         });
 
         // Specific Validation: Images (Required for new products)
@@ -1797,40 +1955,181 @@ require_once __DIR__ . '/_back_button.php';
     });
 
     // Variant management
-    function addVariant() {
-        const container = document.getElementById('variants-container');
+    function generateVariants() {
+        const sizesInput = document.getElementById('gen-sizes').value;
+        const colorsInput = document.getElementById('gen-colors').value;
+        
+        const sizes = sizesInput.split(',').map(s => s.trim()).filter(s => s);
+        const colors = colorsInput.split(',').map(c => c.trim()).filter(c => c);
+        
+        if (sizes.length === 0 && colors.length === 0) {
+            showToast('Please enter at least one size or color', 'warning');
+            return;
+        }
+        
+        let count = 0;
+
+        // Helper to generate SKU suffix
+        const generateSkuSuffix = (s, c) => {
+            let suffix = '';
+            if (s) suffix += '-' + s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (c) suffix += '-' + c.toUpperCase().substr(0, 3).replace(/[^A-Z0-9]/g, '');
+            return suffix;
+        };
+        
+        const baseSku = document.querySelector('input[name="sku"]').value || 'VAR';
+
+        // If only sizes
+        if (colors.length === 0) {
+            sizes.forEach(size => {
+                addVariant(size, '', '#000000', baseSku + generateSkuSuffix(size, ''));
+                count++;
+            });
+        }
+        // If only colors
+        else if (sizes.length === 0) {
+            colors.forEach(color => {
+                addVariant('', color, '#000000', baseSku + generateSkuSuffix('', color));
+                count++;
+            });
+        }
+        // Both
+        else {
+            sizes.forEach(size => {
+                colors.forEach(color => {
+                    addVariant(size, color, '#000000', baseSku + generateSkuSuffix(size, color));
+                    count++;
+                });
+            });
+        }
+        
+        showToast(`Generated ${count} variant combinations`, 'success');
+        
+        // Clear inputs
+        document.getElementById('gen-sizes').value = '';
+        document.getElementById('gen-colors').value = '';
+    }
+
+    function addVariant(size = '', color = '', colorCode = '#000000', sku = '') {
+        const container = document.getElementById('variants-table-body');
         const variantHtml = `
-        <div class="variant-item mb-4 p-4 border border-gray-200 rounded-lg" data-variant-index="${variantIndex}">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2 text-sm">Size *</label>
-                    <input type="text" name="variants[${variantIndex}][size]" required
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2 text-sm">Color</label>
-                    <input type="text" name="variants[${variantIndex}][color]"
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2 text-sm">Stock *</label>
-                    <input type="number" name="variants[${variantIndex}][stock_quantity]" required min="0"
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-medium mb-2 text-sm">Additional Price (₹)</label>
-                    <input type="number" step="0.01" name="variants[${variantIndex}][additional_price]"
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-0 focus:outline-none">
-                </div>
-                <div class="flex items-end">
-                    <button type="button" onclick="removeVariant(${variantIndex})" 
-                            class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
-                        Remove
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
+            <tr class="variant-item group hover:bg-blue-50/30 transition-colors animate-fade-in-up" data-variant-index="${variantIndex}">
+                <input type="hidden" name="variants[${variantIndex}][variant_id]" value="">
+                
+                <!-- Image -->
+                <td class="px-5 py-4 align-top">
+                    <div class="flex flex-col items-center">
+                        <div class="relative w-14 h-14 rounded-lg border-2 border-slate-200 bg-white overflow-hidden shadow-sm group hover:border-pink-400 transition-colors cursor-pointer">
+                            <img src="<?php echo SITE_URL; ?>/assets/images/no-image.png" 
+                                 class="w-full h-full object-cover variant-preview-img">
+                            
+                            <input type="file" name="variants[${variantIndex}][image_file]" accept="image/*" 
+                                   class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                   onchange="initCropper(this)">
+                            
+                            <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2 w-full text-center">
+                            <button type="button" onclick="toggleVariantUrlInput(this)" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wider">Link</button>
+                            <input type="text" name="variants[${variantIndex}][image_url_text]" 
+                                   class="hidden w-full mt-1 bg-white border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:ring-1 focus:ring-pink-500 focus:border-pink-500" 
+                                   placeholder="https://...">
+                        </div>
+                    </div>
+                </td>
+
+                <!-- Attributes -->
+                <td class="px-5 py-4 align-top">
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <span class="w-10 text-xs font-bold text-slate-500 uppercase tracking-wide">Size</span>
+                            <input type="text" name="variants[${variantIndex}][size]" 
+                                value="${escapeHtml(size)}" required 
+                                class="w-24 bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm"
+                                placeholder="S, M...">
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="w-10 text-xs font-bold text-slate-500 uppercase tracking-wide">Color</span>
+                            <div class="flex-1 flex gap-2">
+                                <div class="relative">
+                                    <input type="color" name="variants[${variantIndex}][color_code]" 
+                                        value="${escapeHtml(colorCode)}" 
+                                        class="h-9 w-9 p-0.5 border border-gray-300 rounded cursor-pointer shadow-sm bg-white">
+                                </div>
+                                <input type="text" name="variants[${variantIndex}][color]" 
+                                    value="${escapeHtml(color)}" 
+                                    class="flex-1 bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm transition-shadow" 
+                                    placeholder="Color Name">
+                            </div>
+                        </div>
+                    </div>
+                </td>
+
+                <!-- SKU -->
+                <td class="px-5 py-4 align-top">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                        </div>
+                        <input type="text" name="variants[${variantIndex}][sku]" 
+                            value="${escapeHtml(sku)}" 
+                            class="pl-9 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 font-mono focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm"
+                            placeholder="SKU-123">
+                    </div>
+                </td>
+
+                <!-- Stock -->
+                <td class="px-5 py-4 align-top">
+                    <div class="relative">
+                        <input type="number" name="variants[${variantIndex}][stock_quantity]" 
+                            value="0" required min="0" 
+                            class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm font-semibold text-gray-900 text-center focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm">
+                        <div class="text-[10px] text-center text-slate-400 mt-1 uppercase font-bold tracking-wider">Units</div>
+                    </div>
+                </td>
+
+                <!-- MRP -->
+                <td class="px-5 py-4 align-top">
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-slate-500 font-bold text-sm">₹</span>
+                        <input type="number" step="0.01" name="variants[${variantIndex}][price]" 
+                            value="" 
+                            class="w-full h-11 bg-white border border-gray-300 rounded-md pl-7 pr-3 py-2 text-base font-semibold text-gray-900 text-right focus:border-pink-500 focus:ring-1 focus:ring-pink-500 shadow-sm" placeholder="0.00">
+                    </div>
+                </td>
+
+                <!-- Selling Price -->
+                <td class="px-5 py-4 align-top">
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-green-600 font-bold text-sm">₹</span>
+                        <input type="number" step="0.01" name="variants[${variantIndex}][sale_price]" 
+                            value="" 
+                            class="w-full h-11 bg-white border border-gray-300 rounded-md pl-7 pr-3 py-2 text-base font-semibold text-green-700 text-right focus:border-green-500 focus:ring-1 focus:ring-green-500 shadow-sm" placeholder="0.00">
+                    </div>
+                </td>
+
+                <!-- Actions -->
+                <td class="px-5 py-4 align-top text-right">
+                    <div class="flex items-center justify-end gap-2">
+                         <!-- Status Toggle -->
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="hidden" name="variants[${variantIndex}][is_active]" value="0">
+                            <input type="checkbox" name="variants[${variantIndex}][is_active]" value="1" 
+                                class="sr-only peer" checked>
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-pink-600"></div>
+                        </label>
+                        
+                        <button type="button" onclick="removeVariant(${variantIndex})" 
+                            class="text-slate-400 hover:text-red-600 transition-colors p-2 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-100 shadow-sm">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
 
         container.insertAdjacentHTML('beforeend', variantHtml);
         variantIndex++;
@@ -1840,6 +2139,34 @@ require_once __DIR__ . '/_back_button.php';
         const variantItem = document.querySelector(`[data-variant-index="${index}"]`);
         if (variantItem) {
             variantItem.remove();
+        }
+    }
+
+    function previewVariantImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            const parent = input.closest('.relative') || input.closest('td'); // Support new structure
+            const img = parent.querySelector('.variant-preview-img');
+            
+            reader.onload = function(e) {
+                if(img) img.src = e.target.result;
+            }
+            
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function toggleVariantUrlInput(link) {
+        // Updated to find input relative to the new structure
+        const parent = link.closest('td') || link.closest('.mt-1'); 
+        const urlInput = parent.querySelector('input[type="text"]');
+        
+        if (urlInput.classList.contains('hidden')) {
+            urlInput.classList.remove('hidden');
+            link.innerText = 'Use File Upload';
+        } else {
+            urlInput.classList.add('hidden');
+            link.innerText = 'Link URL';
         }
     }
 

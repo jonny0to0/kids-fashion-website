@@ -436,6 +436,7 @@
     $isSettingsSecuritySettings = $isSettings && $settingsSection === 'security' && $settingsSubsection === 'settings';
     $isSettingsIntegrations = $isSettings && $settingsSection === 'integration';
     $isSettingsBackup = $isSettings && $settingsSection === 'backup';
+    $isSettingsBadges = $isSettings && $settingsSection === 'badges';
 
     // Determine which submenu should be open
     $activeSubmenu = '';
@@ -906,6 +907,10 @@
                         <a href="<?php echo SITE_URL; ?>/admin/settings?section=integration"
                             class="sidebar-submenu-item <?php echo $isSettingsIntegrations ? 'active' : ''; ?>">
                             Integrations
+                        </a>
+                        <a href="<?php echo SITE_URL; ?>/admin/settings?section=badges"
+                            class="sidebar-submenu-item <?php echo $isSettingsBadges ? 'active' : ''; ?>">
+                            Product Badges
                         </a>
                         <a href="<?php echo SITE_URL; ?>/admin/settings?section=backup"
                             class="sidebar-submenu-item <?php echo $isSettingsBackup ? 'active' : ''; ?>">

@@ -17,10 +17,12 @@ class Product extends Model
         $offset = ($page - 1) * $perPage;
 
         $sql = "SELECT p.*, 
+                COALESCE(s.total_quantity, 0) as sold_qty,
                 (SELECT image_url FROM product_images WHERE product_id = p.product_id AND is_primary = 1 LIMIT 1) as primary_image,
                 (SELECT AVG(rating) FROM reviews WHERE product_id = p.product_id AND status = 'APPROVED') as rating,
                 (SELECT COUNT(*) FROM reviews WHERE product_id = p.product_id AND status = 'APPROVED') as review_count
-                FROM {$this->table} p";
+                FROM {$this->table} p
+                LEFT JOIN product_sales_summary s ON p.product_id = s.product_id";
 
         // Add JOIN if filtering by category
         if (!empty($filters['category'])) {
@@ -126,16 +128,9 @@ class Product extends Model
      */
     public function getVariants($productId, $activeOnly = false)
     {
-        $sql = "SELECT * FROM product_variants WHERE product_id = ?";
-        $params = [$productId];
-
-        if ($activeOnly) {
-            $sql .= " AND is_active = 1";
-        }
-
-        $sql .= " ORDER BY size, color";
-        $stmt = $this->query($sql, $params);
-        return $stmt->fetchAll();
+        require_once APP_PATH . '/models/ProductVariant.php';
+        $variantModel = new ProductVariant();
+        return $variantModel->getByProductId($productId, $activeOnly);
     }
 
     /**
@@ -146,50 +141,63 @@ class Product extends Model
      */
     public function saveVariant($productId, $variantData)
     {
+        // Require models if not autoloaded
+        require_once APP_PATH . '/models/ProductVariant.php';
+        require_once APP_PATH . '/models/VariantAttribute.php';
+
+        $variantModel = new ProductVariant();
+        $attributeModel = new VariantAttribute();
+
+        // Extract Size and Color for legacy/hybrid support
+        $variantSize = $variantData['size'] ?? ($variantData['attributes']['Size'] ?? null);
+        $variantColor = $variantData['color'] ?? ($variantData['attributes']['Color'] ?? null);
+
         $data = [
             'product_id' => $productId,
-            'size' => $variantData['size'] ?? '',
-            'color' => $variantData['color'] ?? null,
-            'color_code' => $variantData['color_code'] ?? null,
-            'additional_price' => isset($variantData['additional_price']) ? (float) $variantData['additional_price'] : 0.00,
-            'stock_quantity' => isset($variantData['stock_quantity']) ? (int) $variantData['stock_quantity'] : 0,
             'sku' => $variantData['sku'] ?? null,
+            'size' => $variantSize,
+            'color' => $variantColor,
+            'price' => !empty($variantData['price']) ? (float) $variantData['price'] : 0.00,
+            'sale_price' => !empty($variantData['sale_price']) ? (float) $variantData['sale_price'] : 0.00,
+            'additional_price' => 0.00, // Deprecated but kept for schema compatibility if needed
+            'stock_quantity' => isset($variantData['stock_quantity']) ? (int) $variantData['stock_quantity'] : 0,
+            'image_url' => $variantData['image_url'] ?? null,
             'is_active' => isset($variantData['is_active']) ? (int) $variantData['is_active'] : 1
         ];
 
+        $variantId = null;
+
         if (isset($variantData['variant_id']) && !empty($variantData['variant_id'])) {
-            // Update existing variant
+            // Update
             $variantId = (int) $variantData['variant_id'];
-            unset($data['product_id']); // Don't update product_id
-            if (
-                $this->query(
-                    "UPDATE product_variants SET size = ?, color = ?, color_code = ?, additional_price = ?, stock_quantity = ?, sku = ?, is_active = ? WHERE variant_id = ?",
-                    [$data['size'], $data['color'], $data['color_code'], $data['additional_price'], $data['stock_quantity'], $data['sku'], $data['is_active'], $variantId]
-                ) !== false
-            ) {
-                return $variantId;
-            }
-            return false;
+            unset($data['product_id']); // Don't allow changing product_id
+            $variantModel->update($variantId, $data);
         } else {
-            // Insert new variant
-            $sql = "INSERT INTO product_variants (product_id, size, color, color_code, additional_price, stock_quantity, sku, is_active) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            if (
-                $this->query($sql, [
-                    $data['product_id'],
-                    $data['size'],
-                    $data['color'],
-                    $data['color_code'],
-                    $data['additional_price'],
-                    $data['stock_quantity'],
-                    $data['sku'],
-                    $data['is_active']
-                ]) !== false
-            ) {
-                return $this->getLastInsertId();
-            }
-            return false;
+            // Insert
+            $variantId = $variantModel->create($data);
         }
+
+        if ($variantId) {
+            // Save Attributes
+            if (isset($variantData['attributes']) && is_array($variantData['attributes'])) {
+                // Delete existing attributes for this variant (full replacement strategy)
+                $attributeModel->deleteByVariantId($variantId);
+
+                // Insert new names/values
+                foreach ($variantData['attributes'] as $name => $value) {
+                    if (!empty($value)) {
+                        $attributeModel->create([
+                            'variant_id' => $variantId,
+                            'attribute_name' => $name,
+                            'attribute_value' => $value
+                        ]);
+                    }
+                }
+            }
+            return $variantId;
+        }
+
+        return false;
     }
 
     /**
@@ -351,8 +359,20 @@ class Product extends Model
                 (SELECT AVG(rating) FROM reviews WHERE product_id = p.product_id AND is_approved = 1) as rating,
                 (SELECT COUNT(*) FROM reviews WHERE product_id = p.product_id AND is_approved = 1) as review_count
                 FROM {$this->table} p
-                WHERE p.sale_price IS NOT NULL AND p.sale_price < p.price AND p.status = ?
-                ORDER BY ((p.price - p.sale_price) / p.price * 100) DESC, p.created_at DESC
+                WHERE p.status = ? 
+                AND (
+                    -- Rule 1: Discount >= 25%
+                    (p.sale_price IS NOT NULL AND p.sale_price < p.price AND ((p.price - p.sale_price) / p.price * 100) >= 25)
+                    OR
+                    -- Rule 2: Best seller + discount >= 5%
+                    (p.is_bestseller = 1 AND p.sale_price IS NOT NULL AND p.sale_price < p.price AND ((p.price - p.sale_price) / p.price * 100) >= 5)
+                    -- Future Rules: Flash deal, Clearance, Bundle (columns pending)
+                )
+                ORDER BY 
+                    ((p.price - p.sale_price) / p.price * 100) DESC, -- Priority 1: Highest discount %
+                    p.is_bestseller DESC,                            -- Priority 3: Best sellers
+                    p.price DESC,                                    -- Priority 4: High-margin (proxy via price)
+                    p.created_at DESC
                 LIMIT ?";
 
         $stmt = $this->query($sql, [PRODUCT_STATUS_ACTIVE, $limit]);
@@ -364,15 +384,29 @@ class Product extends Model
      */
     public function getTopSelling($limit = 8)
     {
+        // Use the new summary table for accurate ranking based on quantity sold
         $sql = "SELECT p.*, 
+                COALESCE(s.total_quantity, 0) as sold_qty,
                 (SELECT image_url FROM product_images WHERE product_id = p.product_id AND is_primary = 1 LIMIT 1) as primary_image,
                 (SELECT AVG(rating) FROM reviews WHERE product_id = p.product_id AND is_approved = 1) as rating,
                 (SELECT COUNT(*) FROM reviews WHERE product_id = p.product_id AND is_approved = 1) as review_count
                 FROM {$this->table} p
-                WHERE p.is_bestseller = 1 AND p.status = ?
-                ORDER BY p.created_at DESC
+                LEFT JOIN product_sales_summary s ON p.product_id = s.product_id
+                WHERE p.status = ? 
+                AND (s.is_excluded = 0 OR s.is_excluded IS NULL)
+                AND (s.total_quantity > 0 OR p.is_bestseller = 1) -- Fallback to manual flag if no sales data yet, or use union
+                ORDER BY 
+                    COALESCE(s.is_pinned, 0) DESC,
+                    COALESCE(s.total_quantity, 0) DESC,
+                    COALESCE(s.total_revenue, 0) DESC,
+                    p.is_bestseller DESC, -- Fallback tie-breaker
+                    p.created_at DESC
                 LIMIT ?";
 
+        // Note: Modified logic to prioritize actual sales, but keep manually marked bestsellers as a fallback 
+        // mixed in if they have high priority or if sales data is building up.
+        // For strict adherence to the new rule "Quantity Sold", the primary sort is total_quantity.
+        
         $stmt = $this->query($sql, [PRODUCT_STATUS_ACTIVE, $limit]);
         return $stmt->fetchAll();
     }

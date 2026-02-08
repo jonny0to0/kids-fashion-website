@@ -3,6 +3,59 @@
     --header-offset: 112px;
 }
 
+/* ========================================
+   Range Slider Custom Styles
+   ======================================== */
+
+/* Critical: Allows clicks to pass through the input track key parts but catch the thumb */
+.range-slider-input {
+    pointer-events: none;
+    /* Let clicks pass through the track */
+}
+
+/* Chrome/Safari/Edge Thumb */
+.range-slider-input::-webkit-slider-thumb {
+    pointer-events: auto;
+    /* Catch clicks on the thumb */
+    width: 20px;
+    height: 20px;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    border-radius: 50%;
+    background: #db2777;
+    /* pink-600 */
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px #db2777, 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: -8px;
+    /* Center thumb on track if needed, though we use h-full alignment usually */
+    position: relative;
+    z-index: 50;
+}
+
+/* Firefox Thumb */
+.range-slider-input::-moz-range-thumb {
+    pointer-events: auto;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    border-radius: 50%;
+    background: #db2777;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px #db2777, 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: none;
+    position: relative;
+    z-index: 50;
+}
+
+/* Track styles (if needed, but we used div for visual track) */
+.range-slider-track {
+    background: #e5e7eb;
+    border-radius: 9999px;
+    height: 4px;
+    width: 100%;
+}
+
 /* Expandable Content "See More" Button */
 .see-more-btn {
     display: flex;
@@ -16,15 +69,12 @@
     background: none;
     border: none;
     color: inherit;
-    /* Inherit or set default */
 }
 
 .see-more-btn:hover {
     color: #be185d;
-    /* Pink-700 equivalent */
 }
 
-/* Icon Styles - FIXED SIZE ALWAYS */
 .see-more-icon {
     width: 16px;
     height: 16px;
@@ -33,12 +83,10 @@
     display: inline-block;
 }
 
-/* Expanded State for Icon Rotation */
 .see-more-btn.expanded .see-more-icon {
     transform: rotate(180deg);
 }
 
-/* Expandable Content Transition */
 .expandable-content {
     transition: max-height 0.5s ease-in-out;
     will-change: max-height;
@@ -49,7 +97,6 @@
     position: relative;
 }
 
-/* Fade out effect when collapsed */
 .expandable-wrapper.collapsed .expandable-content::after {
     content: '';
     position: absolute;
@@ -61,76 +108,27 @@
     pointer-events: none;
 }
 
-/* Attribute Table Styles */
-.attr-table {
+/* Standardized Product Image Containers */
+.product-image-standard {
+    position: relative;
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    overflow: hidden;
+    background-color: #f9fafb;
 }
 
-.attr-table tr td {
-    padding: 0.35rem 0;
-    border-bottom: 1px solid #f3f4f6;
-    vertical-align: top;
+.product-image-standard::before {
+    content: "";
+    display: block;
+    padding-bottom: 125%;
+    /* 4:5 Aspect Ratio */
 }
 
-.attr-table tr:last-child td {
-    border-bottom: none;
-}
-
-.attr-table td:first-child {
-    width: 45%;
-    color: #111827;
-    padding-right: 1.5rem;
-}
-
-.attr-table td:last-child {
-    overflow-y: hidden;
-    /* Hide scroll until expanded */
-}
-
-.review-textarea:focus {
-    min-height: 120px;
-    /* Expand on focus */
-    overflow-y: auto;
-}
-
-/* Photo Upload Toggle */
-#photo-upload-section {
-    transition: all 0.3s ease-in-out;
-}
-
-/* Star Input sizing adjustments if needed */
-.star-input svg {
-    transition: transform 0.1s;
-}
-
-.star-input:hover svg {
-    transform: scale(1.1);
-}
-
-/* Custom file input trigger styling */
-.photo-upload-trigger {
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.875rem;
-    color: #4b5563;
-    transition: color 0.2s;
-}
-
-.photo-upload-trigger:hover {
-    color: #db2777;
-    /* pink-600 */
-}
-
-/* Product Details Sticky Image Fix */
-@media (min-width: 1024px) {
-    .product-media-sticky {
-        position: sticky;
-        top: var(--header-offset);
-        align-self: flex-start;
-        z-index: 10;
-        /* Lower than navbar (50) and category bar (40) */
-    }
+.product-image-standard img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
 }

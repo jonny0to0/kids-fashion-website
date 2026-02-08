@@ -17,7 +17,16 @@ $colors = [];
 $sizes = [];
 $variantMap = [];
 if (!empty($variants)) {
-    foreach ($variants as $variant) {
+    foreach ($variants as $key => $variant) {
+        // Normalize attributes for backward compatibility
+        // The DB now stores these in variant_attributes, accessible via ['attributes']
+        $variant['size'] = $variant['attributes']['Size'] ?? ($variant['size'] ?? null);
+        $variant['color'] = $variant['attributes']['Color'] ?? ($variant['color'] ?? null);
+        $variant['color_code'] = $variant['attributes']['Color Code'] ?? ($variant['color_code'] ?? null);
+        
+        // Update the main array reference so it carries through if used elsewhere
+        $variants[$key] = $variant;
+
         if (!empty($variant['color'])) {
             if (!isset($colors[$variant['color']])) {
                 $colors[$variant['color']] = [];
@@ -122,10 +131,11 @@ sort($sizes); // Sort sizes logically
                         <!-- Main Product Image with Amazon-Style Zoom -->
                         <div class="relative bg-white lg:rounded-lg overflow-visible product-image-container lg:border lg:border-gray-200 z-30"
                             id="main-image-container">
-                            <div class="aspect-square flex items-center justify-center p-0 relative">
+                            <!-- Consistent aspect ratio with max-height constraint -->
+                            <div class="w-full flex items-center justify-center bg-gray-50" style="aspect-ratio: 4/5; max-height: 600px;">
                                 <?php if (!empty($images)): ?>
                                     <!-- Desktop (≥1024px): Desktop Image View -->
-                                    <div class="hidden lg:block w-full h-full relative overflow-hidden product-zoom-wrapper cursor-crosshair"
+                                    <div class="hidden lg:flex w-full h-full items-center justify-center overflow-hidden product-zoom-wrapper cursor-crosshair"
                                         id="zoom-wrapper">
                                         <img id="main-image" src="<?php echo SITE_URL . $images[0]['image_url']; ?>"
                                             data-zoom-image="<?php echo !empty($images[0]['zoom_image_url']) ? SITE_URL . $images[0]['zoom_image_url'] : ''; ?>"
@@ -333,12 +343,12 @@ sort($sizes); // Sort sizes logically
                 <!-- Pricing Area -->
                 <div class="mb-4 pb-4 border-b border-gray-200 lg:order-3 lg:border-none lg:pb-2 lg:mb-2 order-1">
                     <div class="flex items-baseline gap-2 flex-wrap mb-1">
-                        <span class="text-3xl font-semibold text-gray-900">₹
-                            <?php echo number_format($price, 2); ?>
+                        <span class="text-3xl font-semibold text-gray-900" id="main-price">₹ 
+                            <?php echo number_format($price); //number_format($price, 2);  ?>
                         </span>
                         <?php if ($hasDiscount): ?>
-                            <span class="text-lg text-gray-400 line-through">₹
-                                <?php echo number_format($product['price'], 2); ?>
+                            <span class="text-lg text-gray-400 line-through" id="original-price">₹
+                                <?php echo number_format($product['price']); //number_format($product['price'], 2); ?>
                             </span>
                             <span class="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">
                                 <?php echo $discountPercent; ?>% OFF
@@ -348,9 +358,8 @@ sort($sizes); // Sort sizes logically
                     <div class="flex flex-col gap-1">
                         <p class="text-xs text-gray-500">Inclusive of all taxes</p>
                         <?php if ($hasDiscount): ?>
-                            <p class="text-sm text-green-700 font-medium">You save
-                                ₹
-                                <?php echo number_format($product['price'] - $price, 2); ?>
+                            <p class="text-sm text-green-700 font-medium" id="savings-text">You save
+                                ₹<?php echo number_format($product['price'] - $price, 2); ?>
                             </p>
                         <?php endif; ?>
                     </div>
@@ -435,22 +444,49 @@ sort($sizes); // Sort sizes logically
                         <!-- Color Selection -->
                         <?php if (!empty($colors)): ?>
                             <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <label class="text-xs font-normal text-gray-700">Color</label>
-                                    <span id="selected-color" class="text-xs text-gray-500"></span>
+                                <div class="flex items-center mb-2">
+                                    <!-- justify-between -->
+                                    <label class="text-md font-bold text-gray-700">Color</label>
+                                    <span id="selected-color" class="text-sm font-semibold text-gray-600 px-2"></span>
                                 </div>
                                 <div class="flex flex-wrap gap-2">
                                     <?php
                                     $colorIndex = 0;
                                     foreach ($colors as $colorName => $colorVariants):
-                                        $firstVariant = $colorVariants[0];
+                                        // Find best representative variant (prioritize one with image)
+                                        $displayVariant = $colorVariants[0];
+                                        foreach ($colorVariants as $v) {
+                                            if (!empty($v['image_url'])) {
+                                                $displayVariant = $v;
+                                                break;
+                                            }
+                                        }
+                                        
+                                        $hasImage = !empty($displayVariant['image_url']);
                                         ?>
                                         <button
-                                            onclick="selectColor('<?php echo htmlspecialchars($colorName); ?>', <?php echo $firstVariant['variant_id']; ?>)"
-                                            class="color-option color-<?php echo $colorIndex; ?> px-3 py-1.5 rounded-lg border-2 border-gray-300 hover:border-pink-500 transition-all duration-200 text-xs font-normal <?php echo $colorIndex === 0 ? 'selected border-pink-500 bg-pink-50' : 'bg-white'; ?>"
+                                            onclick="selectVariantColor('<?php echo htmlspecialchars($colorName); ?>', <?php echo $displayVariant['variant_id']; ?>, '<?php echo $hasImage ? SITE_URL . $displayVariant['image_url'] : ''; ?>', event)"
+                                            onmouseenter="<?php echo $hasImage ? "previewVariantImageHover('" . SITE_URL . $displayVariant['image_url'] . "')" : ""; ?>"
+                                            onmouseleave="resetVariantImageHover()"
+                                            class="color-option color-<?php echo $colorIndex; ?> relative p-0.5 rounded-lg border border-gray-200 hover:border-pink-500 transition-all duration-200 <?php echo $colorIndex === 0 ? 'selected border-pink-500' : 'bg-white'; ?>"
                                             data-color="<?php echo htmlspecialchars($colorName); ?>"
-                                            data-variant-id="<?php echo $firstVariant['variant_id']; ?>">
-                                            <?php echo htmlspecialchars($colorName); ?>
+                                            data-variant-id="<?php echo $displayVariant['variant_id']; ?>"
+                                            title="<?php echo htmlspecialchars($colorName); ?>">
+                                            
+                                            <?php if ($hasImage): ?>
+                                                <div class="md:w-16 md:h-20 w-12 h-16 rounded overflow-hidden p-0 bg-white">
+                                                    <img src="<?php echo SITE_URL . $displayVariant['image_url']; ?>" 
+                                                         alt="<?php echo htmlspecialchars($colorName); ?>"
+                                                         class="w-full h-full object-cover/center">
+                                                </div>
+                                                <div class="absolute bottom-0 left-0 right-0 bg-white/90 text-[10px] text-center font-medium truncate px-0.5 py-0.5">
+                                                    <?php echo htmlspecialchars($colorName); ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <span class="block px-3 py-1.5 text-xs font-normal">
+                                                    <?php echo htmlspecialchars($colorName); ?>
+                                                </span>
+                                            <?php endif; ?>
                                         </button>
                                         <?php
                                         $colorIndex++;
@@ -464,11 +500,31 @@ sort($sizes); // Sort sizes logically
                         <?php if (!empty($sizes)): ?>
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <label class="text-xs font-normal text-gray-700">Size</label>
+                                    <label class="text-md font-bold text-gray-700">Size</label>
                                     <a href="#" class="text-xs text-pink-600 hover:text-pink-700 underline">Size Guide</a>
                                 </div>
-                                <div class="flex flex-wrap gap-2">
+                                <div class="flex flex-wrap gap-3">
                                     <?php
+                                    // Custom Sort Order for Sizes
+                                    $sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', 'XXXL', '3XL', '4XL', '5XL'];
+                                    
+                                    usort($sizes, function($a, $b) use ($sizeOrder) {
+                                        $posA = array_search(strtoupper($a), $sizeOrder);
+                                        $posB = array_search(strtoupper($b), $sizeOrder);
+                                        
+                                        // If both are found in the defined order
+                                        if ($posA !== false && $posB !== false) {
+                                            return $posA - $posB;
+                                        }
+                                        
+                                        // If only one is found, prioritize it
+                                        if ($posA !== false) return -1;
+                                        if ($posB !== false) return 1;
+                                        
+                                        // If neither are found, fall back to natural sorting (numeric friendly)
+                                        return strnatcasecmp($a, $b);
+                                    });
+
                                     $sizeIndex = 0;
                                     foreach ($sizes as $size):
                                         // Find variant with this size (and selected color if applicable)
@@ -480,10 +536,22 @@ sort($sizes); // Sort sizes logically
                                             }
                                         }
                                         $isDisabled = !$availableVariant || ($availableVariant['stock_quantity'] ?? 0) <= 0;
+                                        
+                                        // Dynamic Classes
+                                        $baseClasses = "size-option min-w-[3rem] h-10 px-4 rounded transition-all duration-200 font-medium text-sm flex items-center justify-center border";
+                                        $defaultClasses = "bg-white border-gray-200 text-gray-700 hover:border-pink-600 hover:text-pink-600";
+                                        // Active: Border only, primary color
+                                        $selectedClasses = "selected bg-white border-pink-600 text-pink-600 shadow-sm border-2 font-bold";
+                                        $disabledClasses = "opacity-50 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-100";
+                                        
+                                        $currentClasses = $isDisabled ? $disabledClasses : ($sizeIndex === 0 ? $selectedClasses : $defaultClasses);
+                                        // Set visual order: available first (order: 1), disabled last (order: 2)
+                                        $orderStyle = $isDisabled ? 'order: 2;' : 'order: 1;';
                                         ?>
                                         <button
                                             onclick="selectSize('<?php echo htmlspecialchars($size); ?>', <?php echo $availableVariant ? $availableVariant['variant_id'] : 'null'; ?>)"
-                                            class="size-option px-4 py-2 rounded-lg border-2 font-normal text-xs transition-all duration-200 <?php echo $isDisabled ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : ($sizeIndex === 0 ? 'selected border-pink-500 bg-pink-50 text-pink-700' : 'border-gray-300 bg-white text-gray-700 hover:border-pink-500'); ?>"
+                                            class="<?php echo $baseClasses . ' ' . $currentClasses; ?>"
+                                            style="<?php echo $orderStyle; ?>"
                                             data-size="<?php echo htmlspecialchars($size); ?>"
                                             data-variant-id="<?php echo $availableVariant ? $availableVariant['variant_id'] : ''; ?>"
                                             <?php echo $isDisabled ? 'disabled' : ''; ?>>
@@ -1265,7 +1333,11 @@ sort($sizes); // Sort sizes logically
     <div class="mt-8">
         <h2 class="text-lg font-bold text-gray-900 mb-4 px-4 md:px-0">Related Products</h2>
         <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-6 px-4 md:px-0 scrollbar-hide -mx-4 md:mx-0">
-            <?php foreach ($relatedProducts as $relatedProduct): ?>
+            <?php 
+            $cardContext = 'recommended';
+            foreach ($relatedProducts as $relatedProduct): 
+                $product = $relatedProduct; // Alias for the partial
+            ?>
                 <div class="flex-shrink-0 w-[45%] md:w-[25%] lg:w-[20%] snap-center pl-1">
                     <?php include VIEW_PATH . '/products/_product_card.php'; ?>
                 </div>
@@ -1304,52 +1376,358 @@ sort($sizes); // Sort sizes logically
 </div>
 
 <script>
-    // Variant Selection
+    // Variant Selection with Visual Features
     let selectedColor = null;
     let selectedSize = null;
     let selectedVariantId = null;
+    let activeImageSrc = null;
 
-    function selectColor(colorName, variantId) {
+    // Inject Variant Data
+    const productVariants = <?php echo json_encode($variants); ?>;
+    const variantMap = <?php echo json_encode($variantMap); ?>;
+    const allImages = <?php echo json_encode($images); ?>;
+
+    // Initialize active image on load
+    document.addEventListener('DOMContentLoaded', () => {
+        const mainImg = document.getElementById('main-image');
+        if (mainImg) {
+            activeImageSrc = mainImg.src;
+        }
+
+        // Initialize state based on pre-selected color (first one in loop usually)
+        const firstColorBtn = document.querySelector('.color-option.selected');
+        if (firstColorBtn) {
+            const color = firstColorBtn.getAttribute('data-color');
+            if (color) {
+                selectedColor = color;
+                // Don't auto-select variant ID yet unless we want to force a default size
+                // We just want to filter sizes
+                updateSizeAvailability(selectedColor);
+            }
+        }
+    });
+
+    function filterGalleryByColor(colorName) {
+        if (!colorName) {
+            // Show all if no color selected (or reset)
+            document.querySelectorAll('.product-thumbnail').forEach(el => el.classList.remove('hidden'));
+            return;
+        }
+
+        // Filter functionality would require images to be tagged with color
+        // For now, we update the main image (already done)
+        // If the backend associates images with colors, we could filter here.
+        // Assuming images might not be strictly color-tagged in DB yet, skipping strict filtering to avoid hiding all.
+        // If you strictly want filtering, ensure $images has color data.
+    }
+
+    function updatePriceAndStock(variant) {
+        if (!variant) return;
+
+        let newFinalPrice = 0;
+        let newOriginalPrice = 0;
+        let hasDiscount = false;
+
+        const variantMrp = parseFloat(variant.price || 0);
+        const variantSalePrice = parseFloat(variant.sale_price || 0);
+
+        // Check if new explicit pricing is being used (MRP > 0)
+        if (variantMrp > 0) {
+            // Priority: Sale Price > MRP
+            // If Sale Price is set and valid (positive), use it. Otherwise use MRP.
+            const effectiveSellingPrice = (variantSalePrice > 0) ? variantSalePrice : variantMrp;
+            
+            newFinalPrice = effectiveSellingPrice;
+            newOriginalPrice = variantMrp;
+            
+            // Determine if there's a discount
+            hasDiscount = (newOriginalPrice > newFinalPrice);
+        } else {
+            // Fallback: Legacy logic (Base Price + Additional Price)
+            const additional = parseFloat(variant.additional_price || 0);
+            const baseRegularPrice = <?php echo $product['price']; ?>;
+            const baseSalePrice = <?php echo $product['sale_price'] ? $product['sale_price'] : 'null'; ?>;
+            
+            const baseHasDiscount = (baseSalePrice !== null && baseSalePrice < baseRegularPrice);
+            const effectiveBasePrice = baseHasDiscount ? baseSalePrice : baseRegularPrice;
+
+            newFinalPrice = effectiveBasePrice + additional;
+            newOriginalPrice = baseRegularPrice + additional;
+            hasDiscount = baseHasDiscount; // Note: variants don't have separate discount flag in legacy mode, inherited
+        }
+
+        // Elements
+        const mainPriceEl = document.getElementById('main-price');
+        const originalPriceEl = document.getElementById('original-price');
+        const savingsTextEl = document.getElementById('savings-text');
+
+        // Update Main Price
+        if (mainPriceEl) {
+             mainPriceEl.innerText = '₹' + Math.round(newFinalPrice).toLocaleString('en-IN');
+        }
+
+        // Update Original Price (Strike-through)
+        if (originalPriceEl) {
+            if (hasDiscount) {
+                originalPriceEl.innerText = '₹' + Math.round(newOriginalPrice).toLocaleString('en-IN');
+                originalPriceEl.classList.remove('hidden');
+            } else {
+                originalPriceEl.classList.add('hidden'); // Hide if no discount
+            }
+        }
+
+        // Update Savings Text
+        if (savingsTextEl) {
+             if (hasDiscount) {
+                const savings = newOriginalPrice - newFinalPrice;
+                savingsTextEl.innerText = 'You save ₹' + savings.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                savingsTextEl.parentElement.classList.remove('hidden'); // Ensure parent container is visible
+            } else {
+                savingsTextEl.parentElement.classList.add('hidden'); // Hide entire savings line if no discount
+            }
+        }
+
+        // Update Stock
+        const stockText = document.getElementById('variant-stock-text');
+        if (stockText) {
+            if (variant.stock_quantity > 0) {
+                 stockText.innerText = `In Stock: ${variant.stock_quantity}`;
+                 stockText.className = 'text-green-600 font-medium';
+            } else {
+                 stockText.innerText = 'Out of Stock';
+                 stockText.className = 'text-red-600 font-medium';
+            }
+        }
+    }
+
+    function previewVariantImageHover(src) {
+        if (!src) return;
+        const mainImg = document.getElementById('main-image');
+        if (!mainImg) return;
+        
+        // Just update the visual source, don't touch data state
+        mainImg.src = src;
+        
+        // Update zoom if available
+        if (window.productGallery && window.productGallery.zoomHandler) {
+            window.productGallery.zoomHandler.updateZoomImage(src);
+        }
+    }
+
+    function resetVariantImageHover() {
+        const mainImg = document.getElementById('main-image');
+        if (mainImg && activeImageSrc) {
+            // Restore the "active" selected image
+            mainImg.src = activeImageSrc;
+            
+            // Restore zoom
+             if (window.productGallery && window.productGallery.zoomHandler) {
+                window.productGallery.zoomHandler.updateZoomImage(activeImageSrc);
+            }
+        }
+    }
+
+    function updateSizeAvailability(colorName) {
+        if (!colorName || !productVariants) return;
+
+        const sizeButtons = document.querySelectorAll('.size-option');
+        let firstAvailableSize = null;
+        let isCurrentSizeValid = false;
+
+        sizeButtons.forEach(btn => {
+            const size = btn.getAttribute('data-size');
+            
+            // Find variant for this color + size combination
+            // Note: Data structure might vary, adapting to standard array search
+            const variant = productVariants.find(v => 
+                (v.attributes && v.attributes['Color'] === colorName && v.attributes['Size'] === size) ||
+                (v.color === colorName && v.size === size)
+            );
+
+            const isAvailable = variant && (parseInt(variant.stock_quantity) > 0);
+
+            if (isAvailable) {
+                btn.style.order = '1'; // Move to top
+                btn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-50', 'text-gray-400', 'border-gray-100');
+                btn.classList.add('cursor-pointer', 'hover:border-pink-600', 'hover:text-pink-600');
+                btn.disabled = false;
+                
+                // Keep track if currently selected size is still valid
+                if (selectedSize === size) {
+                    isCurrentSizeValid = true;
+                    selectedVariantId = variant.variant_id;
+                    
+                    // Selected Style (Primary Border Only)
+                    btn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
+                    btn.classList.add('selected', 'bg-white', 'border-pink-600', 'text-pink-600', 'shadow-sm', 'border-2', 'font-bold');
+                } else {
+                     // Default Style
+                    btn.classList.remove('selected', 'bg-white', 'border-pink-600', 'text-pink-600', 'shadow-sm', 'border-2', 'font-bold');
+                    btn.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+                }
+
+                if (!firstAvailableSize) firstAvailableSize = size;
+            } else {
+                // Disabled Style
+                btn.style.order = '2'; // Move to bottom
+                btn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-gray-50', 'text-gray-400', 'border-gray-100');
+                btn.classList.remove('cursor-pointer', 'bg-white', 'text-gray-700', 'border-gray-200', 'hover:border-pink-600', 'hover:text-pink-600', 'selected', 'bg-white', 'border-pink-600', 'text-pink-600', 'shadow-sm', 'border-2', 'font-bold');
+                btn.disabled = true;
+            }
+        });
+
+        // If current selection is invalid, deselect it or select first available
+        if (!isCurrentSizeValid && selectedSize) {
+             selectedSize = null;
+             selectedVariantId = null;
+             updateVariantInfo(); // Hide info
+        }
+    }
+
+    function selectVariantColor(colorName, dummyVariantId, imageUrl = null, event = null) {
+        if (event) {
+            event.preventDefault();
+        }
+
         selectedColor = colorName;
-        selectedVariantId = variantId;
+        // NOTE: We do NOT set selectedVariantId here immediately because 
+        // the user hasn't selected a valid Size for this Color yet.
+        // The dummyVariantId passed might be for a size that doesn't exist on this color.
 
         // Update UI
         document.querySelectorAll('.color-option').forEach(btn => {
-            btn.classList.remove('selected', 'border-pink-500', 'bg-pink-50');
-            btn.classList.add('border-gray-300', 'bg-white');
+            btn.classList.remove('selected', 'border-pink-500');
+            btn.classList.add('border-gray-200');
         });
 
         const selectedBtn = document.querySelector(`.color-option[data-color="${colorName}"]`);
         if (selectedBtn) {
-            selectedBtn.classList.add('selected', 'border-pink-500', 'bg-pink-50');
-            selectedBtn.classList.remove('border-gray-300', 'bg-white');
+            selectedBtn.classList.add('selected', 'border-pink-500');
+            selectedBtn.classList.remove('border-gray-200');
         }
 
         document.getElementById('selected-color').textContent = colorName;
+        
+        // Update Size Availability based on this new color
+        updateSizeAvailability(colorName);
+
+        // Update Main Image State Permanently
+        if (imageUrl) {
+            const mainImg = document.getElementById('main-image');
+            if (mainImg) {
+                activeImageSrc = imageUrl; // Update the "Source of Truth"
+                mainImg.src = imageUrl;
+                
+                 if (window.productGallery && window.productGallery.zoomHandler) {
+                    window.productGallery.zoomHandler.updateZoomImage(imageUrl);
+                }
+            }
+
+            // SYNCHRONIZE WITH GALLERY (Fix for Mobile & Desktop Thumbnails)
+            if (window.productGallery) {
+                let foundIndex = -1;
+                const normalizeUrl = (url) => url ? url.split('?')[0].trim() : '';
+                const targetUrl = normalizeUrl(imageUrl);
+                
+                // Helper to check match
+                const isMatch = (thumbUrl) => {
+                    const tUrl = normalizeUrl(thumbUrl);
+                    return tUrl === targetUrl || (targetUrl.length > 0 && tUrl.endsWith(targetUrl)) || (tUrl.length > 0 && targetUrl.endsWith(tUrl));
+                };
+
+                // Try to find image in desktop thumbnails
+                if (window.productGallery.desktopThumbnails) {
+                    window.productGallery.desktopThumbnails.forEach((thumb, index) => {
+                        if (isMatch(thumb.dataset.imageUrl)) {
+                            foundIndex = index;
+                        }
+                    });
+                }
+                
+                // Fallback: Try mobile thumbnails
+                if (foundIndex === -1 && window.productGallery.mobileThumbnails) {
+                    window.productGallery.mobileThumbnails.forEach((thumb, index) => {
+                        if (isMatch(thumb.dataset.imageUrl)) {
+                            foundIndex = index;
+                        }
+                    });
+                }
+
+                if (foundIndex !== -1) {
+                    // Found in gallery - scroll to it
+                    window.productGallery.updateGallery(foundIndex, 'variant_select');
+                } else {
+                    // NOT found in gallery
+                    // Fallback for Mobile: Update the currently visible slide to show this image
+                    const mobileGallery = document.getElementById('product-main-gallery-mobile');
+                    if (mobileGallery && window.getComputedStyle(mobileGallery).display !== 'none') {
+                        // Get current index from gallery instance or calculate it
+                        const currentIndex = window.productGallery.currentIndex || 0;
+                        const slides = mobileGallery.children;
+                        
+                        // Update the current slide image
+                        if (slides[currentIndex]) {
+                            const img = slides[currentIndex].querySelector('img');
+                            if (img) {
+                                img.src = imageUrl;
+                                // Also update any zoom data if attached
+                                activeImageSrc = imageUrl; 
+                            }
+                        }
+                    }
+                }
+            } else {
+                console.warn('ProductGallery not found');
+            }
+        }
+        
+        // Update Price & Stock based on Variant if we have a full selection
+        if (selectedVariantId) {
+            const variant = variantMap[selectedVariantId];
+            updatePriceAndStock(variant);
+        }
+        
+        filterGalleryByColor(colorName);
         updateVariantInfo();
     }
 
-    function selectSize(size, variantId) {
-        if (!variantId) return;
-
-        selectedSize = size;
-        selectedVariantId = variantId;
-
-        // Update UI
-        document.querySelectorAll('.size-option').forEach(btn => {
-            btn.classList.remove('selected', 'border-pink-500', 'bg-pink-50', 'text-pink-700');
-            if (!btn.disabled) {
-                btn.classList.add('border-gray-300', 'bg-white', 'text-gray-700');
-            }
-        });
-
-        const selectedBtn = document.querySelector(`.size-option[data-size="${size}"]`);
-        if (selectedBtn && !selectedBtn.disabled) {
-            selectedBtn.classList.add('selected', 'border-pink-500', 'bg-pink-50', 'text-pink-700');
-            selectedBtn.classList.remove('border-gray-300', 'bg-white', 'text-gray-700');
+    function selectSize(size, dummyVariantId) {
+        if (!selectedColor) {
+            alert('Please select a color first.');
+            return;
         }
 
-        updateVariantInfo();
+        selectedSize = size;
+        
+        // Resolve the correct variant ID for this Color + Size combo
+        const variant = productVariants.find(v => 
+            (v.attributes && v.attributes['Color'] === selectedColor && v.attributes['Size'] === size) ||
+            (v.color === selectedColor && v.size === size)
+        );
+
+        if (variant) {
+            selectedVariantId = variant.variant_id;
+            
+            // Update UI
+            // Update UI
+            document.querySelectorAll('.size-option').forEach(btn => {
+                btn.classList.remove('selected', 'bg-white', 'border-pink-600', 'text-pink-600', 'shadow-sm', 'border-2', 'font-bold');
+                if (!btn.disabled) {
+                    btn.classList.add('bg-white', 'border-gray-200', 'text-gray-700');
+                }
+            });
+
+            const selectedBtn = document.querySelector(`.size-option[data-size="${size}"]`);
+            if (selectedBtn && !selectedBtn.disabled) {
+                selectedBtn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
+                selectedBtn.classList.add('selected', 'bg-white', 'border-pink-600', 'text-pink-600', 'shadow-sm', 'border-2', 'font-bold');
+            }
+             
+            updatePriceAndStock(variant);
+            updateVariantInfo();
+        } else {
+            console.error('Variant not found for', selectedColor, size);
+        }
     }
 
     function updateVariantInfo() {
@@ -1416,6 +1794,12 @@ sort($sizes); // Sort sizes logically
         const quantityInput = document.querySelector('.product-quantity-input');
         const quantity = quantityInput ? (parseInt(quantityInput.value) || 1) : 1;
         const variantId = selectedVariantId || null;
+
+        // Validation: If variants exist but none selected
+        if (productVariants && productVariants.length > 0 && !variantId) {
+             showToast('Please select a color and size options', 'error');
+             return;
+        }
 
         await addToCart(productId, variantId, quantity);
     }
@@ -1824,35 +2208,12 @@ sort($sizes); // Sort sizes logically
     }
 
     /* Responsive Image Container (Amazon-Style) */
+    /* Now uses 4:5 aspect ratio via padding-bottom: 125% in HTML */
     .product-image-container {
-        min-height: 350px;
         background: linear-gradient(to bottom, #ffffff 0%, #fafafa 100%);
         max-width: 100%;
         overflow: visible;
-        /* Changed from hidden to allow sticky positioning */
-    }
-
-    /* Tablet (640px - 1023px) */
-    @media (min-width: 640px) and (max-width: 1023px) {
-        .product-image-container {
-            min-height: 400px;
-        }
-    }
-
-    /* Laptop (1024px - 1279px) */
-    @media (min-width: 1024px) and (max-width: 1279px) {
-        .product-image-container {
-            min-height: 450px;
-            max-width: 100%;
-        }
-    }
-
-    /* XL Desktop (≥1280px) */
-    @media (min-width: 1280px) {
-        .product-image-container {
-            min-height: 500px;
-            max-width: 100%;
-        }
+        /* Allow sticky positioning and zoom flyout */
     }
 
     /* Ensure images respect grid boundaries and maintain aspect ratio */
@@ -1862,8 +2223,6 @@ sort($sizes); // Sort sizes logically
     #main-image-mobile {
         max-width: 100%;
         max-height: 100%;
-        width: auto;
-        height: auto;
     }
 
     .product-zoom-image,
@@ -1896,13 +2255,6 @@ sort($sizes); // Sort sizes logically
             min-height: 64px;
             width: 64px;
             height: 64px;
-        }
-    }
-
-    /* Mobile Only (<640px) */
-    @media (max-width: 639px) {
-        .product-image-container {
-            min-height: 300px;
         }
     }
 

@@ -14,10 +14,14 @@
         <!-- Product Image -->
         <div class="flex-shrink-0">
             <a href="<?php echo SITE_URL; ?>/product/detail/<?php echo $item['slug']; ?>" 
-               class="block">
-                <img src="<?php echo SITE_URL . ($item['image'] ?? '/assets/images/placeholder.jpg'); ?>" 
-                     alt="<?php echo htmlspecialchars($item['name']); ?>"
-                     class="w-32 h-32 md:w-40 md:h-40 object-cover rounded-lg border border-gray-200 hover:border-pink-300 transition-colors">
+               class="block w-32 md:w-40">
+                <div class="relative w-full overflow-hidden bg-gray-50 rounded-lg border border-gray-200 hover:border-pink-300 transition-colors" style="aspect-ratio: 4/5;">
+                    <img src="<?php echo SITE_URL . ($item['image'] ?? '/assets/images/placeholder.jpg'); ?>" 
+                         alt="<?php echo htmlspecialchars($item['name']); ?>"
+                         class="absolute inset-0 w-full h-full object-cover object-center"
+                         loading="lazy"
+                         onerror="this.onerror=null; this.src='<?php echo SITE_URL; ?>/assets/images/no-image.png';">
+                </div>
             </a>
         </div>
         

@@ -67,6 +67,27 @@ class CartController {
         
         $price = $this->productModel->getPrice($product);
         
+        // Check for variant price override
+        if ($variantId) {
+            require_once APP_PATH . '/models/ProductVariant.php';
+            $variantModel = new ProductVariant();
+            $variant = $variantModel->getVariant($variantId);
+            
+            if ($variant) {
+                // Priority 1: Absolute Price Override
+                // Check for sale price first
+                if (!empty($variant['sale_price']) && $variant['sale_price'] > 0 && $variant['sale_price'] < $variant['price']) {
+                    $price = $variant['sale_price'];
+                } elseif (!empty($variant['price']) && $variant['price'] > 0) {
+                    $price = $variant['price'];
+                }
+                // Priority 2: Price Adjustment (Additional Price) - Legacy support
+                elseif (isset($variant['additional_price']) && is_numeric($variant['additional_price'])) {
+                    $price += (float)$variant['additional_price'];
+                }
+            }
+        }
+        
         $cart = $this->getCart();
         
         // If buy now, clear existing cart items first

@@ -246,6 +246,40 @@ class AdminController
     }
 
     /**
+     * Product Details & Sales View
+     */
+    public function productDetails($id)
+    {
+        $product = $this->productModel->find($id);
+
+        if (!$product) {
+            Session::setFlash('error', 'Product not found');
+            header('Location: ' . SITE_URL . '/admin/products');
+            exit;
+        }
+        
+        // Get primary image
+        $primaryImage = $this->productModel->query(
+            "SELECT image_url FROM product_images WHERE product_id = ? AND is_primary = 1 LIMIT 1", 
+            [$id]
+        )->fetch();
+        $product['primary_image'] = $primaryImage['image_url'] ?? null;
+        
+        // Get sales stats
+        $salesStats = $this->orderModel->getSalesStatsByProduct($id);
+        
+        // Get recent orders for this product
+        $productOrders = $this->orderModel->getOrdersByProduct($id, 50);
+
+        $this->render('admin/products/details', [
+            'pageTitle' => 'Dashboard',
+            'product' => $product,
+            'salesStats' => $salesStats,
+            'orders' => $productOrders
+        ]);
+    }
+
+    /**
      * Products Inventory Management
      */
     public function productsInventory()
@@ -662,6 +696,8 @@ class AdminController
                 });
                 $categoryAttributes = array_values($categoryAttributes); // Re-index array
             }
+            
+
 
             $this->render('admin/product_form', [
                 'product' => $product,
@@ -737,6 +773,33 @@ class AdminController
         }
 
         header('Location: ' . SITE_URL . '/admin/products');
+        exit;
+    }
+
+    /**
+     * Recalculate Top Selling Products
+     * Route: /admin/products/recalculate-top
+     */
+    public function productsRecalculateTopSelling()
+    {
+        // Only allow POST requests for this action
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
+             // Allow GET for simple testing link, but ideally should be POST
+        }
+
+        require_once APP_PATH . '/services/TopSellingService.php';
+        
+        try {
+            $service = new TopSellingService();
+            $count = $service->recalculateAll();
+            
+            Session::setFlash('success', "Top Selling Products recalculated successfully. Processed {$count} products.");
+        } catch (Exception $e) {
+            Session::setFlash('error', "Failed to recalculate: " . $e->getMessage());
+        }
+        
+        // Redirect back to dashboard or products page
+        header('Location: ' . SITE_URL . '/admin/dashboard');
         exit;
     }
 
@@ -835,6 +898,8 @@ class AdminController
                 // Update existing product
                 $data['updated_at'] = date('Y-m-d H:i:s');
                 if ($this->productModel->update($productId, $data)) {
+
+                    
                     // Handle image upload
                     $this->handleProductImages($productId);
 
@@ -856,6 +921,8 @@ class AdminController
                 $newProductId = $this->productModel->create($data);
 
                 if ($newProductId) {
+
+
                     // Handle image upload
                     $this->handleProductImages($newProductId);
 
@@ -998,6 +1065,9 @@ class AdminController
     /**
      * Handle product variants save
      */
+    /**
+     * Handle product variants save
+     */
     private function handleProductVariants($productId)
     {
         // Get variant data from POST
@@ -1012,20 +1082,72 @@ class AdminController
         $existingVariantIds = array_column($existingVariants, 'variant_id');
         $processedVariantIds = [];
 
+        $uploader = new ImageUpload();
+        $uploadDir = 'products/variants';
+
         // Save or update variants
-        foreach ($variants as $variantData) {
+        foreach ($variants as $index => $variantData) {
             if (empty($variantData['size'])) {
                 continue; // Skip variants without size
             }
 
+            // Handle Variant Image Upload
+            $imageUrl = $variantData['existing_image_url'] ?? null;
+            
+            // Check if a new file was selected for this variant index
+            // PHP structure for array inputs: $_FILES['variants']['name'][$index]['image_file']
+            if (isset($_FILES['variants']['name'][$index]['image_file']) && !empty($_FILES['variants']['name'][$index]['image_file'])) {
+                $file = [
+                    'name' => $_FILES['variants']['name'][$index]['image_file'],
+                    'type' => $_FILES['variants']['type'][$index]['image_file'],
+                    'tmp_name' => $_FILES['variants']['tmp_name'][$index]['image_file'],
+                    'error' => $_FILES['variants']['error'][$index]['image_file'],
+                    'size' => $_FILES['variants']['size'][$index]['image_file']
+                ];
+
+                $result = $uploader->upload($file, $uploadDir, 'variant_' . $productId . '_');
+                if ($result['success']) {
+                    $imageUrl = $result['relative_path'];
+                    if (strpos($imageUrl, '/') !== 0) {
+                        $imageUrl = '/' . $imageUrl;
+                    }
+                } else {
+                    // Start: error logging
+                    error_log("Variant image upload failed for product {$productId}, index {$index}: " . ($result['error'] ?? 'Unknown error'));
+                    // We continue saving the variant, just without the new image
+                }
+            } elseif (!empty($variantData['image_url_text'])) {
+                 // User provided a manual URL (e.g. external link)
+                 $imageUrl = Validator::sanitize($variantData['image_url_text']);
+            }
+
+            // flexible attributes system
+            $attributes = [];
+            if (!empty($variantData['size'])) {
+                $attributes['Size'] = Validator::sanitize($variantData['size']);
+            }
+            if (!empty($variantData['color'])) {
+                $attributes['Color'] = Validator::sanitize($variantData['color']);
+            }
+            if (!empty($variantData['color_code'])) {
+                $attributes['Color Code'] = Validator::sanitize($variantData['color_code']);
+            }
+            // Allow for other dynamic attributes if passed in the future
+            if (!empty($variantData['attributes']) && is_array($variantData['attributes'])) {
+                foreach ($variantData['attributes'] as $k => $v) {
+                    $attributes[$k] = Validator::sanitize($v);
+                }
+            }
+
             $variantInfo = [
-                'size' => Validator::sanitize($variantData['size'] ?? ''),
-                'color' => !empty($variantData['color']) ? Validator::sanitize($variantData['color']) : null,
-                'color_code' => !empty($variantData['color_code']) ? Validator::sanitize($variantData['color_code']) : null,
+                'attributes' => $attributes,
+                'price' => !empty($variantData['price']) ? (float) $variantData['price'] : 0.00,
+                'sale_price' => !empty($variantData['sale_price']) ? (float) $variantData['sale_price'] : 0.00,
                 'additional_price' => !empty($variantData['additional_price']) ? (float) $variantData['additional_price'] : 0.00,
                 'stock_quantity' => !empty($variantData['stock_quantity']) ? (int) $variantData['stock_quantity'] : 0,
                 'sku' => !empty($variantData['sku']) ? Validator::sanitize($variantData['sku']) : null,
-                'is_active' => isset($variantData['is_active']) ? 1 : 1
+                'image_url' => $imageUrl,
+                'is_active' => isset($variantData['is_active']) ? (int) $variantData['is_active'] : 1
             ];
 
             // If variant_id is provided, update existing variant
@@ -1040,6 +1162,7 @@ class AdminController
         // Delete variants that were removed
         $variantsToDelete = array_diff($existingVariantIds, $processedVariantIds);
         foreach ($variantsToDelete as $variantId) {
+            // Also optional: Delete the variant image file if it exists and is local
             $this->productModel->deleteVariant($variantId);
         }
     }
@@ -3723,10 +3846,31 @@ class AdminController
         $items = $this->orderModel->getOrderItems($orderId);
         $statusHistory = $this->orderModel->getStatusHistory($orderId);
 
+        // Fetch Previous and Next Order IDs for navigation
+        $prevOrder = $this->orderModel->query("SELECT order_id FROM orders WHERE order_id < ? ORDER BY order_id DESC LIMIT 1", [$orderId])->fetch();
+        $nextOrder = $this->orderModel->query("SELECT order_id FROM orders WHERE order_id > ? ORDER BY order_id ASC LIMIT 1", [$orderId])->fetch();
+
+        // Fetch Customer Stats
+        $customerStats = [];
+        if (!empty($order['user_id'])) {
+            $customerStats = $this->userModel->query(
+                "SELECT COUNT(*) as total_orders, SUM(final_amount) as total_spent 
+                 FROM orders WHERE user_id = ? AND order_status != ?", 
+                [$order['user_id'], ORDER_STATUS_CANCELLED]
+            )->fetch();
+        }
+
+        // Fetch Payments
+        $payments = $this->orderModel->getPayments($orderId);
+
         $this->render('admin/orders/detail', [
             'order' => $order,
             'items' => $items,
-            'statusHistory' => $statusHistory
+            'statusHistory' => $statusHistory,
+            'prevOrder' => $prevOrder ? $prevOrder['order_id'] : null,
+            'nextOrder' => $nextOrder ? $nextOrder['order_id'] : null,
+            'customerStats' => $customerStats,
+            'payments' => $payments
         ]);
     }
 
@@ -3888,6 +4032,98 @@ class AdminController
             ]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to update shipping details']);
+        }
+        exit;
+    }
+
+    /**
+     * Mark Order as Paid (Manual/COD)
+     */
+    public function markOrderPaid()
+    {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
+        }
+
+        $orderId = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
+        $notes = isset($_POST['notes']) ? trim($_POST['notes']) : 'Manual payment confirmation';
+
+        if (!$orderId) {
+            echo json_encode(['success' => false, 'message' => 'Missing order ID']);
+            exit;
+        }
+
+        $order = $this->orderModel->find($orderId);
+        if (!$order) {
+            echo json_encode(['success' => false, 'message' => 'Order not found']);
+            exit;
+        }
+
+        try {
+            // Update Order Payment Status
+            $this->orderModel->updatePaymentStatus($orderId, PAYMENT_STATUS_PAID, Session::getUserId());
+
+            // Log Payment
+            $this->orderModel->addPayment([
+                'order_id' => $orderId,
+                'payment_method' => $order['payment_method'],
+                'amount' => $order['final_amount'],
+                'status' => 'paid',
+                'type' => 'payment',
+                'notes' => $notes,
+                'created_by' => Session::getUserId()
+            ]);
+
+            echo json_encode(['success' => true, 'message' => 'Order marked as paid']);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Error processing payment: ' . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    /**
+     * Process Refund
+     */
+    public function processOrderRefund()
+    {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
+        }
+
+        $orderId = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
+        $amount = isset($_POST['amount']) ? (float) $_POST['amount'] : 0;
+        $reason = isset($_POST['reason']) ? trim($_POST['reason']) : '';
+
+        if (!$orderId || $amount <= 0 || empty($reason)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
+            exit;
+        }
+
+        $order = $this->orderModel->find($orderId);
+        if (!$order) {
+            echo json_encode(['success' => false, 'message' => 'Order not found']);
+            exit;
+        }
+
+        if ($amount > $order['final_amount']) {
+             echo json_encode(['success' => false, 'message' => 'Refund amount cannot exceed order total']);
+             exit;
+        }
+
+        $result = $this->orderModel->processRefund($orderId, $amount, $reason, Session::getUserId());
+
+        if ($result) {
+            $newStatus = ($amount >= $order['final_amount']) ? PAYMENT_STATUS_REFUNDED : 'partially_refunded';
+            $this->orderModel->updatePaymentStatus($orderId, $newStatus, Session::getUserId());
+            echo json_encode(['success' => true, 'message' => 'Refund processed successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to process refund']);
         }
         exit;
     }
